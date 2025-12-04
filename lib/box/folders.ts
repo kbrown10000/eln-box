@@ -1,17 +1,31 @@
 import { getBoxClient } from './client';
 import { Project, Experiment } from './types';
 
-const PROJECTS_FOLDER_ID = process.env.BOX_PROJECTS_FOLDER_ID || '0';
+/**
+ * Get the projects folder ID from environment
+ * Fails fast if not configured (validation happens in getBoxClient)
+ */
+function getProjectsFolderId(): string {
+  const folderId = process.env.BOX_PROJECTS_FOLDER_ID;
+  if (!folderId || folderId === '0') {
+    throw new Error(
+      'BOX_PROJECTS_FOLDER_ID is not configured or set to "0". ' +
+      'Run npm run setup-box-folders to create the folder structure.'
+    );
+  }
+  return folderId;
+}
 
 /**
  * Create a new project folder with metadata
  */
 export async function createProject(project: Omit<Project, 'folderId'>): Promise<Project> {
   const client = getBoxClient();
+  const projectsFolderId = getProjectsFolderId();
 
   // 1. Create folder under /Projects
   const folder = await client.folders.create(
-    PROJECTS_FOLDER_ID,
+    projectsFolderId,
     `${project.projectCode}-${project.projectName.replace(/\s+/g, '-')}`
   );
 
@@ -82,15 +96,41 @@ export async function getProject(folderId: string): Promise<Project> {
 }
 
 /**
+ * Pagination options for list operations
+ */
+export interface PaginationOptions {
+  limit?: number;
+  offset?: number;
+}
+
+/**
+ * Paginated response wrapper
+ */
+export interface PaginatedResult<T> {
+  items: T[];
+  totalCount: number;
+  limit: number;
+  offset: number;
+}
+
+const DEFAULT_LIMIT = 50;
+const MAX_LIMIT = 100;
+
+/**
  * List all projects (query Box for folders with projectMetadata)
  */
-export async function listProjects(): Promise<Project[]> {
+export async function listProjects(options: PaginationOptions = {}): Promise<PaginatedResult<Project>> {
   const client = getBoxClient();
+  const projectsFolderId = getProjectsFolderId();
 
-  // Get all folders in the Projects folder
-  const items = await client.folders.getItems(PROJECTS_FOLDER_ID, {
+  const limit = Math.min(options.limit || DEFAULT_LIMIT, MAX_LIMIT);
+  const offset = options.offset || 0;
+
+  // Get folders in the Projects folder with pagination
+  const items = await client.folders.getItems(projectsFolderId, {
     fields: 'name,created_at,modified_at',
-    limit: 1000,
+    limit,
+    offset,
   });
 
   const projects: Project[] = [];
@@ -106,7 +146,12 @@ export async function listProjects(): Promise<Project[]> {
     }
   }
 
-  return projects;
+  return {
+    items: projects,
+    totalCount: items.total_count,
+    limit,
+    offset,
+  };
 }
 
 /**
@@ -255,19 +300,28 @@ export async function getExperiment(folderId: string): Promise<Experiment> {
 /**
  * List experiments in a project
  */
-export async function listExperiments(projectFolderId: string): Promise<Experiment[]> {
+export async function listExperiments(
+  projectFolderId: string,
+  options: PaginationOptions = {}
+): Promise<PaginatedResult<Experiment>> {
   const client = getBoxClient();
+
+  const limit = Math.min(options.limit || DEFAULT_LIMIT, MAX_LIMIT);
+  const offset = options.offset || 0;
 
   // Find Experiments subfolder
   const items = await client.folders.getItems(projectFolderId);
   const experimentsFolder = items.entries.find((e: any) => e.name === 'Experiments');
 
   if (!experimentsFolder) {
-    return [];
+    return { items: [], totalCount: 0, limit, offset };
   }
 
-  // Get all experiment folders
-  const experimentItems = await client.folders.getItems(experimentsFolder.id);
+  // Get experiment folders with pagination
+  const experimentItems = await client.folders.getItems(experimentsFolder.id, {
+    limit,
+    offset,
+  });
 
   const experiments: Experiment[] = [];
 
@@ -282,7 +336,12 @@ export async function listExperiments(projectFolderId: string): Promise<Experime
     }
   }
 
-  return experiments;
+  return {
+    items: experiments,
+    totalCount: experimentItems.total_count,
+    limit,
+    offset,
+  };
 }
 
 /**

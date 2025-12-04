@@ -2,10 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { listProjects, createProject } from '@/lib/box/folders';
 
 // GET /api/projects - List all projects
+// Query params: ?limit=50&offset=0
 export async function GET(req: NextRequest) {
   try {
-    const projects = await listProjects();
-    return NextResponse.json(projects);
+    const { searchParams } = new URL(req.url);
+    const limit = parseInt(searchParams.get('limit') || '50', 10);
+    const offset = parseInt(searchParams.get('offset') || '0', 10);
+
+    const result = await listProjects({ limit, offset });
+    return NextResponse.json(result);
   } catch (error) {
     console.error('Error fetching projects:', error);
     return NextResponse.json(

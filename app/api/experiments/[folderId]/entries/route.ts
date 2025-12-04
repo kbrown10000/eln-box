@@ -2,14 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { listEntries, createEntry } from '@/lib/box/files';
 
 // GET /api/experiments/:folderId/entries - List entries in an experiment
+// Query params: ?limit=50&offset=0
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ folderId: string }> }
 ) {
   try {
     const { folderId } = await params;
-    const entries = await listEntries(folderId);
-    return NextResponse.json(entries);
+    const { searchParams } = new URL(req.url);
+    const limit = parseInt(searchParams.get('limit') || '50', 10);
+    const offset = parseInt(searchParams.get('offset') || '0', 10);
+
+    const result = await listEntries(folderId, { limit, offset });
+    return NextResponse.json(result);
   } catch (error) {
     console.error('Error fetching entries:', error);
     return NextResponse.json(

@@ -1,6 +1,10 @@
 import { getBoxClient } from './client';
 import { Entry } from './types';
+import { PaginationOptions, PaginatedResult } from './folders';
 import { Readable } from 'stream';
+
+const DEFAULT_LIMIT = 50;
+const MAX_LIMIT = 100;
 
 /**
  * Create a new entry as a markdown file
@@ -140,19 +144,28 @@ export async function updateEntry(
 /**
  * List entries in an experiment
  */
-export async function listEntries(experimentFolderId: string): Promise<Entry[]> {
+export async function listEntries(
+  experimentFolderId: string,
+  options: PaginationOptions = {}
+): Promise<PaginatedResult<Entry>> {
   const client = getBoxClient();
+
+  const limit = Math.min(options.limit || DEFAULT_LIMIT, MAX_LIMIT);
+  const offset = options.offset || 0;
 
   // Find Entries subfolder
   const items = await client.folders.getItems(experimentFolderId);
   const entriesFolder = items.entries.find((e: any) => e.name === 'Entries');
 
   if (!entriesFolder) {
-    return [];
+    return { items: [], totalCount: 0, limit, offset };
   }
 
-  // Get all entry files
-  const entryItems = await client.folders.getItems(entriesFolder.id);
+  // Get entry files with pagination
+  const entryItems = await client.folders.getItems(entriesFolder.id, {
+    limit,
+    offset,
+  });
 
   const entries: Entry[] = [];
 
@@ -167,7 +180,12 @@ export async function listEntries(experimentFolderId: string): Promise<Entry[]> 
     }
   }
 
-  return entries;
+  return {
+    items: entries,
+    totalCount: entryItems.total_count,
+    limit,
+    offset,
+  };
 }
 
 /**

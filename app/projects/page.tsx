@@ -1,17 +1,10 @@
 import { Project } from '@/lib/box/types';
+import { listProjects } from '@/lib/box/folders';
 
 async function getProjects(): Promise<Project[]> {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/projects`, {
-      cache: 'no-store',
-    });
-
-    if (!res.ok) {
-      console.error('Failed to fetch projects:', res.statusText);
-      return [];
-    }
-
-    return res.json();
+    const result = await listProjects();
+    return result.items;
   } catch (error) {
     console.error('Error fetching projects:', error);
     return [];

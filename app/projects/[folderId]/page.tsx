@@ -1,17 +1,9 @@
 import { Project, Experiment } from '@/lib/box/types';
+import { getProject as getProjectFromBox, listExperiments } from '@/lib/box/folders';
 
 async function getProject(folderId: string): Promise<Project | null> {
   try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/projects/${folderId}`,
-      { cache: 'no-store' }
-    );
-
-    if (!res.ok) {
-      return null;
-    }
-
-    return res.json();
+    return await getProjectFromBox(folderId);
   } catch (error) {
     console.error('Error fetching project:', error);
     return null;
@@ -20,16 +12,8 @@ async function getProject(folderId: string): Promise<Project | null> {
 
 async function getExperiments(folderId: string): Promise<Experiment[]> {
   try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/projects/${folderId}/experiments`,
-      { cache: 'no-store' }
-    );
-
-    if (!res.ok) {
-      return [];
-    }
-
-    return res.json();
+    const result = await listExperiments(folderId);
+    return result.items;
   } catch (error) {
     console.error('Error fetching experiments:', error);
     return [];

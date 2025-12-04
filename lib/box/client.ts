@@ -3,6 +3,39 @@ import BoxSDK from 'box-node-sdk';
 let cachedClient: any = null;
 
 /**
+ * Validate all required Box environment variables are present
+ * Fails fast with clear error messages
+ */
+function validateBoxEnvVars(): void {
+  const required = [
+    'BOX_CLIENT_ID',
+    'BOX_CLIENT_SECRET',
+    'BOX_ENTERPRISE_ID',
+    'BOX_PUBLIC_KEY_ID',
+    'BOX_PRIVATE_KEY',
+    'BOX_PASSPHRASE',
+    'BOX_PROJECTS_FOLDER_ID',
+  ];
+
+  const missing = required.filter((key) => !process.env[key]);
+
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing required Box environment variables: ${missing.join(', ')}. ` +
+      'Please configure all Box credentials in your environment.'
+    );
+  }
+
+  // Validate BOX_PROJECTS_FOLDER_ID is not '0' (Box root)
+  if (process.env.BOX_PROJECTS_FOLDER_ID === '0') {
+    throw new Error(
+      'BOX_PROJECTS_FOLDER_ID cannot be "0" (Box root folder). ' +
+      'Please create a dedicated /ELN-Root/Projects folder and set its ID.'
+    );
+  }
+}
+
+/**
  * Get or create the Box SDK client instance
  * Uses JWT authentication with service account
  */
@@ -11,10 +44,8 @@ export function getBoxClient() {
     return cachedClient;
   }
 
-  // Check for required environment variables
-  if (!process.env.BOX_CLIENT_ID) {
-    throw new Error('BOX_CLIENT_ID environment variable is required');
-  }
+  // Validate all required environment variables
+  validateBoxEnvVars();
 
   try {
     const sdk = BoxSDK.getPreconfiguredInstance({
