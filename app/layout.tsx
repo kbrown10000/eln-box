@@ -35,19 +35,19 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} bg-white text-gray-800`}>
-        <header className="bg-[#001E4C] text-white shadow-md">
+        <header className="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-600 text-white shadow-md">
           <div className="container mx-auto px-6 py-4 flex justify-between items-center">
             <a href="/" className="flex items-center">
               <BeakerIcon />
               <span className="text-2xl font-bold">LabNoteX</span>
             </a>
             <nav className="hidden md:flex items-center space-x-6">
-              <a href="#" className="hover:text-blue-300">Features</a>
-              <a href="#" className="hover:text-blue-300">Pricing</a>
-              <a href="#" className="hover:text-blue-300">Box Integration</a>
-              <a href="#" className="hover:text-blue-300">Contact</a>
+              <a href="#features" className="hover:text-blue-200">Features</a>
+              <a href="#pricing" className="hover:text-blue-200">Pricing</a>
+              <a href="#integration" className="hover:text-blue-200">Box Integration</a>
+              <a href="#contact" className="hover:text-blue-200">Contact</a>
               <a
-                href="#"
+                href="/login"
                 className="bg-white text-blue-600 font-semibold px-4 py-2 rounded-md hover:bg-gray-200"
               >
                 Login / Sign Up
@@ -77,7 +77,7 @@ export default function RootLayout({
                 <a href="#" className="hover:underline">Box Partner Portal</a>
               </div>
               <div className="flex items-center space-x-2">
-                <span>▲ Vercel</span>
+                <span>Vercel</span>
                 <span>|</span>
                 <span className="font-bold">box</span>
               </div>

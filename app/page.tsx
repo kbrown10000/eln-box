@@ -1,110 +1,252 @@
-import Image from "next/image";
+const featureCards = [
+  {
+    title: "Fast, Reliable, Scalable",
+    body: "Vercel-hosted frontend with instant deploys, edge caching, and zero-downtime rollouts.",
+    badge: "Vercel Deployed",
+  },
+  {
+    title: "Enterprise-Grade Security",
+    body: "Box-native encryption, permissions, and audit history keep research data compliant.",
+    badge: "Box Integrated",
+  },
+  {
+    title: "Collaboration and Sharing",
+    body: "Real-time teamwork on experiments, entries, and attachments stored in Box.",
+    badge: "Team Ready",
+  },
+];
 
-const CloudIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    className="h-10 w-10 text-blue-600 mb-4"
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
-    />
-  </svg>
-);
-
-const ShieldIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    className="h-10 w-10 text-blue-600 mb-4"
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 20.944a12.02 12.02 0 009 2.056 12.02 12.02 0 009-2.056c0-3.333-1.423-6.41-3.618-8.618z"
-    />
-  </svg>
-);
-
-const UsersIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    className="h-10 w-10 text-blue-600 mb-4"
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.653-.184-1.268-.5-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.653.184-1.268.5-1.857m0 0a5.002 5.002 0 019 0m0 0a5 5 0 005 5m-5-5a5 5 0 00-9 0"
-    />
-  </svg>
-);
-
-
-export default function Home() {
-  return (
-    <>
-      <div className="bg-[#001E4C] text-white">
-        <div className="container mx-auto px-6 py-16 md:py-24">
-          <div className="flex flex-col md:flex-row items-center">
-            <div className="md:w-1/2 text-center md:text-left mb-10 md:mb-0">
-              <h1 className="text-4xl md:text-5xl font-bold leading-tight mb-4">
-                The Future of Your Lab's Research, Powered by Box.
-              </h1>
-              <p className="text-lg md:text-xl text-blue-200 mb-8">
-                Seamlessly manage your experiments, data, and collaboration with our Vercel-deployed platform. Securely store and access all content via your trusted Box account.
-              </p>
-              <a
-                href="#"
-                className="bg-white text-blue-600 font-semibold px-8 py-3 rounded-md hover:bg-gray-200"
-              >
-                Start Free Trial
-              </a>
+const HeroPanel = () => (
+  <div className="relative">
+    <div className="relative z-10 rounded-3xl bg-white/10 backdrop-blur border border-white/20 shadow-2xl p-6 md:p-8">
+      <div className="text-sm text-blue-50 mb-2">Lab Notebook</div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="rounded-xl bg-white/90 text-slate-800 p-4 shadow-lg">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <p className="text-xs text-slate-500">Experiments</p>
+              <p className="text-xl font-semibold">Aspirin Study</p>
             </div>
-            <div className="md:w-1/2">
-              {/* Placeholder for tablet image */}
-              <div className="bg-gray-700 w-full h-80 rounded-lg flex items-center justify-center">
-                <p className="text-gray-400">Tablet Image Placeholder</p>
+            <span className="text-xs font-semibold text-blue-700 bg-blue-100 px-2 py-1 rounded-md">
+              Active
+            </span>
+          </div>
+          <div className="space-y-3">
+            <div className="h-16 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-400 opacity-90"></div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-600">Yield</span>
+              <span className="font-semibold text-slate-900">84.3%</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-600">Observations</span>
+              <span className="font-semibold text-slate-900">Crystalline solid</span>
+            </div>
+          </div>
+        </div>
+        <div className="rounded-xl bg-white/80 text-slate-800 p-4 shadow-lg flex flex-col justify-between">
+          <div>
+            <p className="text-xs text-slate-500 mb-1">Spectroscopy</p>
+            <div className="h-24 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center">
+              <div className="w-3/4 h-2 bg-gradient-to-r from-slate-400 via-slate-700 to-slate-400 rounded-full"></div>
+            </div>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500 mb-2">Files</p>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="truncate">IR_spectrum_aspirin.pdf</span>
+                <span className="text-slate-500">250 KB</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="truncate">reaction_notes.docx</span>
+                <span className="text-slate-500">18 KB</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="truncate">TLC_plate.jpg</span>
+                <span className="text-slate-500">450 KB</span>
               </div>
             </div>
           </div>
         </div>
       </div>
+    </div>
+    <div className="absolute -left-8 -bottom-10 h-48 w-48 bg-white/10 rounded-full blur-3xl"></div>
+    <div className="absolute -right-10 -top-12 h-32 w-32 bg-cyan-400/30 rounded-full blur-3xl"></div>
+  </div>
+);
 
-      <div className="py-16 bg-white">
-        <div className="container mx-auto px-6">
-          <h2 className="text-3xl font-bold text-center mb-12">
-            Why LabNoteX?
-          </h2>
-          <div className="grid md:grid-cols-3 gap-8 text-center">
-            <div className="p-8 border border-gray-200 rounded-lg shadow-sm">
-              <CloudIcon />
-              <h3 className="text-xl font-semibold mb-2">Fast, Reliable & Scalable Access</h3>
-              <p className="text-gray-600">Vercel Deployed</p>
+export default function Home() {
+  return (
+    <div className="bg-white">
+      <section className="relative overflow-hidden bg-gradient-to-br from-blue-900 via-blue-800 to-blue-600 text-white">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.15),transparent_35%)]"></div>
+        <div className="container mx-auto px-6 py-16 lg:py-20 relative">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div className="space-y-6">
+              <h1 className="text-4xl lg:text-5xl font-bold leading-tight">
+                The Future of Your Lab&apos;s Research, Powered by Box.
+              </h1>
+              <p className="text-lg text-blue-100 max-w-2xl">
+                Seamlessly manage experiments, data, and collaboration with our Vercel-deployed platform.
+                Securely store and access all content via your trusted Box account.
+              </p>
+              <div className="flex flex-wrap items-center gap-4">
+                <a
+                  href="/start"
+                  className="bg-white text-blue-800 font-semibold px-6 py-3 rounded-md shadow-lg hover:bg-blue-50 transition"
+                >
+                  Start Free Trial
+                </a>
+                <a
+                  href="/demo"
+                  className="border border-white/70 text-white font-semibold px-6 py-3 rounded-md hover:bg-white/10 transition"
+                >
+                  Request a Demo
+                </a>
+              </div>
             </div>
-            <div className="p-8 border border-blue-600 rounded-lg shadow-lg">
-              <ShieldIcon />
-              <h3 className="text-xl font-semibold mb-2">Enterprise-Grade Security & Compliance</h3>
-              <p className="text-gray-600">Box Integrated</p>
-            </div>
-            <div className="p-8 border border-gray-200 rounded-lg shadow-sm">
-              <UsersIcon />
-              <h3 className="text-xl font-semibold mb-2">Real-time Team Collaboration & Data Sharing</h3>
+            <div className="hidden lg:block">
+              <HeroPanel />
             </div>
           </div>
         </div>
-      </div>
-    </>
+        <div className="bg-white h-12 w-full -mb-1 rounded-t-[48px]"></div>
+      </section>
+
+      <section id="features" className="container mx-auto px-6 py-12 lg:py-16">
+        <div className="flex flex-col items-center text-center space-y-4 mb-10">
+          <div className="inline-flex items-center space-x-2 rounded-full bg-blue-50 text-blue-800 px-4 py-1 text-sm font-semibold">
+            <span>Trusted by scientists and IT teams</span>
+          </div>
+          <h2 className="text-3xl font-bold">Why LabNoteX?</h2>
+          <p className="text-gray-600 max-w-2xl">
+            Purpose-built for regulated research teams who need Box-grade governance with a modern ELN experience.
+          </p>
+        </div>
+        <div className="grid md:grid-cols-3 gap-6">
+          {featureCards.map((card) => (
+            <div
+              key={card.title}
+              className="border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition"
+            >
+              <div className="inline-flex items-center rounded-full bg-blue-50 text-blue-700 px-3 py-1 text-xs font-semibold">
+                {card.badge}
+              </div>
+              <h3 className="text-xl font-semibold mt-4">{card.title}</h3>
+              <p className="text-gray-600 mt-2">{card.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section id="integration" className="bg-gray-50 py-12 lg:py-16">
+        <div className="container mx-auto px-6">
+          <div className="grid lg:grid-cols-2 gap-8 items-center">
+            <div className="space-y-4">
+              <h3 className="text-2xl font-bold">Box-First Architecture</h3>
+              <p className="text-gray-700">
+                Every project, experiment, entry, and attachment is stored in Box with metadata templates for structure.
+                No separate database to manage, and permissions stay in sync with your Box policies.
+              </p>
+              <ul className="space-y-2 text-gray-700 list-disc list-inside">
+                <li>Projects and experiments mapped to Box folders</li>
+                <li>Entries stored as versioned markdown files in Box</li>
+                <li>Attachments live alongside entries with native previews</li>
+              </ul>
+            </div>
+            <div className="rounded-2xl border border-blue-100 bg-white shadow-lg p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-sm text-gray-500">Current Experiment</p>
+                  <p className="text-xl font-semibold text-slate-900">Acetylation Reaction</p>
+                </div>
+                <span className="text-xs font-semibold text-green-700 bg-green-100 px-3 py-1 rounded-md">
+                  Compliant
+                </span>
+              </div>
+              <div className="space-y-3 text-sm text-gray-700">
+                <div className="flex items-center justify-between">
+                  <span>Box Folder</span>
+                  <span className="font-semibold text-blue-700">/Projects/ASP-001/Experiments</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Versioning</span>
+                  <span className="font-semibold text-slate-900">Enabled</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Signatures</span>
+                  <span className="font-semibold text-slate-900">Digital signature ready</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Permissions</span>
+                  <span className="font-semibold text-slate-900">Follows Box access</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="pricing" className="container mx-auto px-6 py-12 lg:py-16">
+        <div className="grid lg:grid-cols-2 gap-8 items-center">
+          <div className="space-y-4">
+            <h3 className="text-2xl font-bold">Flexible plans for your team</h3>
+            <p className="text-gray-700">
+              Start fast with a pilot, then scale to your entire research organization with enterprise controls.
+            </p>
+            <div className="flex items-center space-x-3">
+              <div className="h-3 w-3 rounded-full bg-blue-600"></div>
+              <p className="text-gray-700">Simple seat-based pricing with Box and Vercel included.</p>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="h-3 w-3 rounded-full bg-green-500"></div>
+              <p className="text-gray-700">Onboarding and template setup services available.</p>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-gray-200 shadow-lg p-6 bg-white">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-lg font-semibold">Starter</h4>
+              <span className="text-2xl font-bold text-blue-700">$29</span>
+            </div>
+            <p className="text-gray-600 mb-4">Per user per month, billed annually.</p>
+            <ul className="space-y-2 text-gray-700 list-disc list-inside">
+              <li>Unlimited projects, experiments, and entries</li>
+              <li>Box metadata templates preconfigured</li>
+              <li>Digital signatures and versioning</li>
+              <li>Team collaboration and permissions</li>
+            </ul>
+            <a
+              href="/pricing"
+              className="inline-flex mt-6 justify-center rounded-md bg-blue-700 text-white px-5 py-3 font-semibold hover:bg-blue-800 transition"
+            >
+              View detailed pricing
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section id="contact" className="bg-gray-900 text-white py-12">
+        <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
+          <div>
+            <h3 className="text-2xl font-bold">Ready to modernize your lab notebook?</h3>
+            <p className="text-gray-200">Talk with our team about Box integration, compliance, and deployment.</p>
+          </div>
+          <div className="flex items-center space-x-3">
+            <a
+              href="/contact"
+              className="rounded-md bg-white text-blue-800 px-5 py-3 font-semibold shadow hover:bg-blue-50 transition"
+            >
+              Contact Sales
+            </a>
+            <a
+              href="/projects"
+              className="rounded-md border border-white/60 text-white px-5 py-3 font-semibold hover:bg-white/10 transition"
+            >
+              View Projects
+            </a>
+          </div>
+        </div>
+      </section>
+    </div>
   );
 }
