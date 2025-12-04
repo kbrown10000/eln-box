@@ -9,8 +9,15 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
+        primary: "#0A2540",
+        secondary: "#F6F9FC",
+        accent: "#00C49A",
+        "text-body": "#525F7F",
+        "border-light": "#E6E6E6",
+      },
+      fontFamily: {
+        heading: ["var(--font-roboto-slab)", "serif"],
+        body: ["var(--font-roboto)", "sans-serif"],
       },
     },
   },

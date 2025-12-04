@@ -1,10 +1,21 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Roboto, Roboto_Slab } from "next/font/google"; // Import both fonts
 import "./globals.css";
 import AuthProvider from "./components/AuthProvider";
 import UserMenu from "./components/UserMenu";
+import BeakerIcon from "./components/BeakerIcon"; // Import BeakerIcon
 
-const inter = Inter({ subsets: ["latin"] });
+const roboto = Roboto({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "700"], // Specify weights you need
+  variable: "--font-roboto", // Define as CSS variable
+});
+
+const robotoSlab = Roboto_Slab({
+  subsets: ["latin"],
+  weight: ["400", "700"], // Specify weights you need
+  variable: "--font-roboto-slab", // Define as CSS variable
+});
 
 export const metadata: Metadata = {
   title: "LabNoteX - Secure, Cloud-Based Research",
@@ -18,31 +29,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={inter.className} suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={`${roboto.variable} ${robotoSlab.variable}`}>
+      <body className="font-body antialiased">
         <AuthProvider>
-          <header className="bg-white shadow-sm">
+          <header className="bg-primary text-white shadow-md"> {/* Updated header background and text color */}
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
               <div className="flex h-16 justify-between">
                 <div className="flex">
                   <div className="flex flex-shrink-0 items-center">
                     <a href="/" className="flex items-center">
-                      <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                        <svg
-                          className="w-5 h-5 text-white"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
-                          />
-                        </svg>
-                      </div>
-                      <span className="ml-2 text-xl font-bold text-gray-800">
+                      <BeakerIcon /> {/* Use BeakerIcon component */}
+                      <span className="ml-2 text-xl font-bold font-heading"> {/* Apply font-heading */}
                         LabNoteX
                       </span>
                     </a>
@@ -50,19 +47,19 @@ export default function RootLayout({
                   <div className="hidden sm:-my-px sm:ml-8 sm:flex sm:space-x-6">
                     <a
                       href="/"
-                      className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                      className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-body hover:border-gray-300 hover:text-gray-200"
                     >
                       Home
                     </a>
                     <a
                       href="/dashboard"
-                      className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                      className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-body hover:border-gray-300 hover:text-gray-200"
                     >
                       Dashboard
                     </a>
                     <a
                       href="/projects"
-                      className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                      className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-body hover:border-gray-300 hover:text-gray-200"
                     >
                       Projects
                     </a>
@@ -74,12 +71,12 @@ export default function RootLayout({
               </div>
             </div>
           </header>
-          <main className="min-h-screen bg-gray-50">
+          <main className="min-h-screen bg-secondary"> {/* Updated main background */}
             {children}
           </main>
-          <footer className="bg-white border-t">
+          <footer className="bg-primary text-white border-t border-border-light"> {/* Updated footer background and text color */}
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-              <div className="py-4 flex justify-between items-center text-sm text-gray-500">
+              <div className="py-4 flex justify-between items-center text-sm font-body">
                 <div>
                   <span>&copy; 2024 LabNoteX. All rights reserved.</span>
                 </div>
@@ -87,7 +84,7 @@ export default function RootLayout({
                   <span className="font-medium">Powered by</span>
                   <span className="font-medium">▲ Vercel</span>
                   <span className="text-gray-400">+</span>
-                  <span className="font-bold text-blue-600">box</span>
+                  <span className="font-bold text-white">box</span> {/* Changed to white for contrast */}
                 </div>
               </div>
             </div>
