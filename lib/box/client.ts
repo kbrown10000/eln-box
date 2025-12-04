@@ -1,14 +1,14 @@
 import BoxSDK from 'box-node-sdk';
 
-let boxClient: any = null;
+let cachedClient: any = null;
 
 /**
  * Get or create the Box SDK client instance
  * Uses JWT authentication with service account
  */
 export function getBoxClient() {
-  if (boxClient) {
-    return boxClient;
+  if (cachedClient) {
+    return cachedClient;
   }
 
   // Check for required environment variables
@@ -31,9 +31,9 @@ export function getBoxClient() {
     });
 
     // Service account client (acts as the app)
-    boxClient = sdk.getAppAuthClient('enterprise');
+    cachedClient = sdk.getAppAuthClient('enterprise');
 
-    return boxClient;
+    return cachedClient;
   } catch (error) {
     console.error('Failed to initialize Box SDK client:', error);
     throw new Error('Box SDK initialization failed. Check your environment variables.');
