@@ -80,12 +80,13 @@ export default function RootLayout({
           <footer className="bg-white border-t">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
               <div className="py-4 flex justify-between items-center text-sm text-gray-500">
-                <div className="flex space-x-4">
-                  <a href="#" className="hover:text-gray-700">Privacy Policy</a>
-                  <a href="#" className="hover:text-gray-700">Terms of Service</a>
+                <div>
+                  <span>&copy; 2024 LabNoteX. All rights reserved.</span>
                 </div>
                 <div className="flex items-center space-x-3">
+                  <span className="font-medium">Powered by</span>
                   <span className="font-medium">▲ Vercel</span>
+                  <span className="text-gray-400">+</span>
                   <span className="font-bold text-blue-600">box</span>
                 </div>
               </div>
