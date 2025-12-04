@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Experiment } from '@/lib/box/types';
 import ProtocolSection from '@/app/components/experiment/ProtocolSection';
 import ReagentsTable from '@/app/components/experiment/ReagentsTable';
@@ -15,6 +15,13 @@ interface ExperimentClientProps {
 }
 
 // Types for experiment data
+interface ProtocolStep {
+  id: string;
+  stepNumber: number;
+  instruction: string;
+  notes?: string;
+}
+
 interface Reagent {
   id: string;
   name: string;
@@ -22,6 +29,15 @@ interface Reagent {
   unit: string;
   molarAmount?: number;
   observations?: string;
+}
+
+interface YieldData {
+  id: string;
+  theoretical: number;
+  actual: number;
+  percentage: number;
+  unit: string;
+  productName?: string;
 }
 
 interface Spectrum {
@@ -33,105 +49,291 @@ interface Spectrum {
   peakData?: Record<string, string>;
 }
 
-// Mock data for demonstration - in production this would come from the database
-const mockProtocolSteps = [
-  { id: '1', stepNumber: 1, instruction: 'Weigh 2.0g salicylic acid into a 100mL flask.' },
-  { id: '2', stepNumber: 2, instruction: 'Add 5.0mL acetic anhydride and 5 drops conc. H2SO4.' },
-  { id: '3', stepNumber: 3, instruction: 'Heat on a water bath at 85°C for 20 min.' },
-  { id: '4', stepNumber: 4, instruction: 'Cool and add 50mL cold water.' },
-  { id: '5', stepNumber: 5, instruction: 'Filter and recrystallize from ethanol.' },
-];
-
-const mockReagents: Reagent[] = [
-  {
-    id: '1',
-    name: 'Salicylic Acid',
-    amount: 2.01,
-    unit: 'g',
-    molarAmount: 0.0145,
-    observations: 'White crystalline solid',
-  },
-];
-
-const mockYieldData = {
-  id: '1',
-  theoretical: 2.61,
-  actual: 2.20,
-  percentage: 84.3,
-  unit: 'g',
-};
-
-const mockSpectra: Spectrum[] = [
-  {
-    id: '1',
-    spectrumType: 'IR',
-    caption: 'Figure 1: IR Spectrum of Crude Product',
-    boxFileId: '123456',
-    fileName: 'IR_spectrum_aspirin_oct26.pdf',
-    peakData: { '1750 cm-1': 'Strong peak indicates ester formation' },
-  },
-];
-
-const mockFiles = [
-  { id: '1', name: 'IR_spectrum_aspirin_oct26.pdf', type: 'file' as const, size: 256000 },
-  { id: '2', name: 'reaction_notes.docx', type: 'file' as const, size: 18432 },
-  { id: '3', name: 'TLC_plate.jpg', type: 'file' as const, size: 460800 },
-];
+interface BoxFile {
+  id: string;
+  name: string;
+  type: 'file' | 'folder';
+  size?: number;
+}
 
 export default function ExperimentClient({
   experiment,
   folderId,
   userId,
 }: ExperimentClientProps) {
-  // State for data - in production these would be fetched from the database
-  const [protocolSteps, setProtocolSteps] = useState(mockProtocolSteps);
-  const [reagents, setReagents] = useState(mockReagents);
-  const [yieldData, setYieldData] = useState(mockYieldData);
-  const [spectra, setSpectra] = useState(mockSpectra);
-  const [files, setFiles] = useState(mockFiles);
+  // State for data
+  const [protocolSteps, setProtocolSteps] = useState<ProtocolStep[]>([]);
+  const [reagents, setReagents] = useState<Reagent[]>([]);
+  const [yieldData, setYieldData] = useState<YieldData | null>(null);
+  const [spectra, setSpectra] = useState<Spectrum[]>([]);
+  const [files, setFiles] = useState<BoxFile[]>([]);
   const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleAddProtocolStep = (instruction: string) => {
-    const newStep = {
-      id: `step-${Date.now()}`,
-      stepNumber: protocolSteps.length + 1,
-      instruction,
-    };
-    setProtocolSteps([...protocolSteps, newStep]);
+  // Fetch experiment data from database
+  const fetchData = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/experiment-data/${folderId}`);
+      if (response.ok) {
+        const data = await response.json();
+
+        // Transform database records to component format
+        setProtocolSteps(
+          data.protocolSteps.map((step: any) => ({
+            id: step.id,
+            stepNumber: step.stepNumber,
+            instruction: step.instruction,
+            notes: step.notes,
+          }))
+        );
+
+        setReagents(
+          data.reagents.map((r: any) => ({
+            id: r.id,
+            name: r.name,
+            amount: parseFloat(r.amount) || 0,
+            unit: r.unit || 'g',
+            molarAmount: r.molarAmount ? parseFloat(r.molarAmount) : undefined,
+            observations: r.observations,
+          }))
+        );
+
+        if (data.yields && data.yields.length > 0) {
+          const y = data.yields[0];
+          setYieldData({
+            id: y.id,
+            theoretical: parseFloat(y.theoretical) || 0,
+            actual: parseFloat(y.actual) || 0,
+            percentage: parseFloat(y.percentage) || 0,
+            unit: y.unit || 'g',
+            productName: y.productName,
+          });
+        }
+
+        setSpectra(
+          data.spectra.map((s: any) => ({
+            id: s.id,
+            spectrumType: s.spectrumType,
+            caption: s.caption || '',
+            boxFileId: s.boxFileId || '',
+            fileName: s.title || '',
+            peakData: s.peakData || {},
+          }))
+        );
+      }
+    } catch (err) {
+      console.error('Error fetching experiment data:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [folderId]);
+
+  // Fetch Box files
+  const fetchFiles = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/box/folders/${folderId}/items`);
+      if (response.ok) {
+        const data = await response.json();
+        setFiles(
+          data.entries?.map((item: any) => ({
+            id: item.id,
+            name: item.name,
+            type: item.type,
+            size: item.size,
+          })) || []
+        );
+      }
+    } catch (err) {
+      console.error('Error fetching files:', err);
+    }
+  }, [folderId]);
+
+  useEffect(() => {
+    fetchData();
+    fetchFiles();
+  }, [fetchData, fetchFiles]);
+
+  // Protocol step handlers
+  const handleAddProtocolStep = async (instruction: string) => {
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/experiment-data/${folderId}/protocol`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instruction }),
+      });
+
+      if (response.ok) {
+        const newStep = await response.json();
+        setProtocolSteps(prev => [...prev, {
+          id: newStep.id,
+          stepNumber: newStep.stepNumber,
+          instruction: newStep.instruction,
+          notes: newStep.notes,
+        }]);
+      }
+    } catch (err) {
+      console.error('Error adding step:', err);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleUpdateProtocolStep = (id: string, instruction: string) => {
-    setProtocolSteps(
-      protocolSteps.map((step) => (step.id === id ? { ...step, instruction } : step))
-    );
+  const handleUpdateProtocolStep = async (id: string, instruction: string) => {
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/experiment-data/${folderId}/protocol`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, instruction }),
+      });
+
+      if (response.ok) {
+        setProtocolSteps(prev =>
+          prev.map(step => (step.id === id ? { ...step, instruction } : step))
+        );
+      }
+    } catch (err) {
+      console.error('Error updating step:', err);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleDeleteProtocolStep = (id: string) => {
-    setProtocolSteps(protocolSteps.filter((step) => step.id !== id));
+  const handleDeleteProtocolStep = async (id: string) => {
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/experiment-data/${folderId}/protocol?id=${id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setProtocolSteps(prev => prev.filter(step => step.id !== id));
+      }
+    } catch (err) {
+      console.error('Error deleting step:', err);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleAddReagent = (reagent: Omit<Reagent, 'id'>) => {
-    setReagents([...reagents, { ...reagent, id: `reagent-${Date.now()}` }]);
+  // Reagent handlers
+  const handleAddReagent = async (reagent: Omit<Reagent, 'id'>) => {
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/experiment-data/${folderId}/reagents`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(reagent),
+      });
+
+      if (response.ok) {
+        const newReagent = await response.json();
+        setReagents(prev => [...prev, {
+          id: newReagent.id,
+          name: newReagent.name,
+          amount: parseFloat(newReagent.amount) || 0,
+          unit: newReagent.unit,
+          molarAmount: newReagent.molarAmount ? parseFloat(newReagent.molarAmount) : undefined,
+          observations: newReagent.observations,
+        }]);
+      }
+    } catch (err) {
+      console.error('Error adding reagent:', err);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleDeleteReagent = (id: string) => {
-    setReagents(reagents.filter((r) => r.id !== id));
+  const handleDeleteReagent = async (id: string) => {
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/experiment-data/${folderId}/reagents?id=${id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setReagents(prev => prev.filter(r => r.id !== id));
+      }
+    } catch (err) {
+      console.error('Error deleting reagent:', err);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleSaveYield = (data: { theoretical: number; actual: number; unit: string }) => {
-    setYieldData({
-      ...data,
-      id: yieldData?.id || `yield-${Date.now()}`,
-      percentage: (data.actual / data.theoretical) * 100,
-    });
+  // Yield handler
+  const handleSaveYield = async (data: { theoretical: number; actual: number; unit: string }) => {
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/experiment-data/${folderId}/yields`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      if (response.ok) {
+        const savedYield = await response.json();
+        setYieldData({
+          id: savedYield.id,
+          theoretical: parseFloat(savedYield.theoretical) || 0,
+          actual: parseFloat(savedYield.actual) || 0,
+          percentage: parseFloat(savedYield.percentage) || 0,
+          unit: savedYield.unit,
+          productName: savedYield.productName,
+        });
+      }
+    } catch (err) {
+      console.error('Error saving yield:', err);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleAddSpectrum = (spectrum: Omit<Spectrum, 'id'>) => {
-    setSpectra([...spectra, { ...spectrum, id: `spectrum-${Date.now()}` }]);
+  // Spectrum handlers
+  const handleAddSpectrum = async (spectrum: Omit<Spectrum, 'id'>) => {
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/experiment-data/${folderId}/spectra`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(spectrum),
+      });
+
+      if (response.ok) {
+        const newSpectrum = await response.json();
+        setSpectra(prev => [...prev, {
+          id: newSpectrum.id,
+          spectrumType: newSpectrum.spectrumType,
+          caption: newSpectrum.caption || '',
+          boxFileId: newSpectrum.boxFileId || '',
+          fileName: newSpectrum.title || '',
+          peakData: newSpectrum.peakData || {},
+        }]);
+      }
+    } catch (err) {
+      console.error('Error adding spectrum:', err);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleDeleteSpectrum = (id: string) => {
-    setSpectra(spectra.filter((s) => s.id !== id));
+  const handleDeleteSpectrum = async (id: string) => {
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/experiment-data/${folderId}/spectra?id=${id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setSpectra(prev => prev.filter(s => s.id !== id));
+      }
+    } catch (err) {
+      console.error('Error deleting spectrum:', err);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -146,6 +348,17 @@ export default function ExperimentClient({
         return 'bg-gray-100 text-gray-800';
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading experiment data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -162,6 +375,12 @@ export default function ExperimentClient({
             </p>
           </div>
           <div className="flex items-center gap-3">
+            {isSaving && (
+              <span className="text-sm text-gray-500 flex items-center gap-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                Saving...
+              </span>
+            )}
             <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(experiment.status)}`}>
               {experiment.status}
             </span>
@@ -220,7 +439,7 @@ export default function ExperimentClient({
         editable={isEditing}
       />
 
-      {/* Results Section */}
+      {/* Reagents Table */}
       <ReagentsTable
         reagents={reagents}
         onAddReagent={handleAddReagent}
@@ -246,7 +465,7 @@ export default function ExperimentClient({
       {/* Box File Browser */}
       <BoxFileBrowser
         folderId={folderId}
-        folderPath={['LabNoteX_Projects', 'Synthesis_of_Aspirin', 'reaction-1_data']}
+        folderPath={['LabNoteX_Projects', experiment.experimentTitle || 'Experiment']}
         files={files}
         onNavigate={(id) => console.log('Navigate to folder:', id)}
         onUpload={(file) => console.log('Upload file:', file.name)}
