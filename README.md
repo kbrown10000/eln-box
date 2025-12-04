@@ -215,6 +215,41 @@ git push -u origin main
 - `PATCH /api/entries/:fileId` - Update entry
 - `DELETE /api/entries/:fileId` - Delete entry
 
+### Pagination
+
+All list endpoints support pagination via query parameters:
+- `?limit=50` - Number of items per page (default: 50, max: 100)
+- `?offset=0` - Starting index for pagination
+
+Response format:
+```json
+{
+  "items": [...],
+  "totalCount": 150,
+  "limit": 50,
+  "offset": 0
+}
+```
+
+## Security Considerations
+
+### Authentication (TODO)
+
+Currently, API endpoints are unauthenticated. Before production deployment, implement one of these authentication strategies:
+
+1. **Vercel Authentication** - Use Vercel's built-in auth or NextAuth.js
+2. **Box OAuth 2.0** - Use Box as the identity provider (recommended for Box-centric apps)
+3. **Enterprise SSO** - Integrate with existing SAML/OIDC provider
+
+The service account (JWT) authentication is only for server-to-Box communication. User authentication requires a separate implementation.
+
+### Current Security Measures
+
+- Environment variables are validated at startup
+- BOX_PROJECTS_FOLDER_ID cannot be '0' (prevents writing to Box root)
+- Pagination limits prevent excessive data retrieval
+- Server components call Box directly (no localhost fetches in production)
+
 ## License
 
 MIT
