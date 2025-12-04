@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { listProjects, createProject } from '@/lib/box/folders';
+import { requireApiAuth } from '@/lib/auth/session';
 
 // GET /api/projects - List all projects
 // Query params: ?limit=50&offset=0
 export async function GET(req: NextRequest) {
+  const { error, session } = await requireApiAuth();
+  if (error) return error;
+
   try {
     const { searchParams } = new URL(req.url);
     const limit = parseInt(searchParams.get('limit') || '50', 10);
@@ -22,6 +26,9 @@ export async function GET(req: NextRequest) {
 
 // POST /api/projects - Create new project
 export async function POST(req: NextRequest) {
+  const { error, session } = await requireApiAuth();
+  if (error) return error;
+
   try {
     const body = await req.json();
 
@@ -36,8 +43,8 @@ export async function POST(req: NextRequest) {
     const project = await createProject({
       projectCode: body.projectCode,
       projectName: body.projectName,
-      piName: body.piName || '',
-      piEmail: body.piEmail || '',
+      piName: body.piName || session!.user.name,
+      piEmail: body.piEmail || session!.user.email,
       department: body.department || '',
       startDate: body.startDate || new Date().toISOString().split('T')[0],
       status: body.status || 'planning',

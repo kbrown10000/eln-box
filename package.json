@@ -11,22 +11,27 @@
     "setup-box-templates": "tsx scripts/setup-box-templates.ts"
   },
   "dependencies": {
+    "@vercel/postgres": "^0.10.0",
+    "box-node-sdk": "^3.4.0",
+    "drizzle-kit": "^0.31.7",
+    "drizzle-orm": "^0.44.7",
+    "next": "^15.1.5",
+    "next-auth": "^5.0.0-beta.30",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "next": "^15.1.5",
-    "box-node-sdk": "^3.4.0"
+    "react-icons": "^5.5.0"
   },
   "devDependencies": {
-    "typescript": "^5.7.2",
     "@types/node": "^22.10.5",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
-    "tailwindcss": "^3.4.17",
-    "postcss": "^8.4.49",
     "autoprefixer": "^10.4.20",
+    "dotenv": "^16.6.1",
     "eslint": "^9.17.0",
     "eslint-config-next": "^15.1.5",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
     "tsx": "^4.19.2",
-    "dotenv": "^16.4.7"
+    "typescript": "^5.7.2"
   }
 }

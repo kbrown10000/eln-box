@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import AuthProvider from "./components/AuthProvider";
+import UserMenu from "./components/UserMenu";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -10,80 +12,80 @@ export const metadata: Metadata = {
     "Seamlessly manage your experiments, data, and collaboration with our Vercel-deployed platform. Securely store and access all content via your trusted Box account.",
 };
 
-const BeakerIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    className="h-8 w-8 inline-block mr-2 text-white"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M4.5 3h15" />
-    <path d="M6 3v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V3" />
-    <path d="M6 14h12" />
-  </svg>
-);
-
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${inter.className} bg-white text-gray-800`}>
-        <header className="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-600 text-white shadow-md">
-          <div className="container mx-auto px-6 py-4 flex justify-between items-center">
-            <a href="/" className="flex items-center">
-              <BeakerIcon />
-              <span className="text-2xl font-bold">LabNoteX</span>
-            </a>
-            <nav className="hidden md:flex items-center space-x-6">
-              <a href="#features" className="hover:text-blue-200">Features</a>
-              <a href="#pricing" className="hover:text-blue-200">Pricing</a>
-              <a href="#integration" className="hover:text-blue-200">Box Integration</a>
-              <a href="#contact" className="hover:text-blue-200">Contact</a>
-              <a
-                href="/login"
-                className="bg-white text-blue-600 font-semibold px-4 py-2 rounded-md hover:bg-gray-200"
-              >
-                Login / Sign Up
-              </a>
-            </nav>
-            <button className="md:hidden flex items-center">
-              <svg viewBox="0 0 20 20" fill="currentColor" className="menu w-6 h-6">
-                <path
-                  fillRule="evenodd"
-                  d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
-                  clipRule="evenodd"
-                ></path>
-              </svg>
-            </button>
-          </div>
-        </header>
-
-        <main>{children}</main>
-
-        <footer className="bg-white border-t mt-12">
-          <div className="container mx-auto px-6 py-4">
-            <div className="flex justify-between items-center text-sm text-gray-600">
-              <div className="flex space-x-4">
-                <a href="#" className="hover:underline">Privacy Policy</a>
-                <a href="#" className="hover:underline">Terms of Service</a>
-                <a href="#" className="hover:underline">Vercel Status</a>
-                <a href="#" className="hover:underline">Box Partner Portal</a>
-              </div>
-              <div className="flex items-center space-x-2">
-                <span>Vercel</span>
-                <span>|</span>
-                <span className="font-bold">box</span>
+    <html lang="en" suppressHydrationWarning>
+      <body className={inter.className} suppressHydrationWarning>
+        <AuthProvider>
+          <header className="bg-white shadow-sm">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+              <div className="flex h-16 justify-between">
+                <div className="flex">
+                  <div className="flex flex-shrink-0 items-center">
+                    <a href="/" className="flex items-center">
+                      <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                        <svg
+                          className="w-5 h-5 text-white"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
+                          />
+                        </svg>
+                      </div>
+                      <span className="ml-2 text-xl font-bold text-gray-800">
+                        LabNoteX
+                      </span>
+                    </a>
+                  </div>
+                  <div className="hidden sm:-my-px sm:ml-8 sm:flex sm:space-x-6">
+                    <a
+                      href="/"
+                      className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                    >
+                      Home
+                    </a>
+                    <a
+                      href="/projects"
+                      className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                    >
+                      Projects
+                    </a>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <UserMenu />
+                </div>
               </div>
             </div>
-          </div>
-        </footer>
+          </header>
+          <main className="min-h-screen bg-gray-50">
+            {children}
+          </main>
+          <footer className="bg-white border-t">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+              <div className="py-4 flex justify-between items-center text-sm text-gray-500">
+                <div className="flex space-x-4">
+                  <a href="#" className="hover:text-gray-700">Privacy Policy</a>
+                  <a href="#" className="hover:text-gray-700">Terms of Service</a>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <span className="font-medium">▲ Vercel</span>
+                  <span className="font-bold text-blue-600">box</span>
+                </div>
+              </div>
+            </div>
+          </footer>
+        </AuthProvider>
       </body>
     </html>
   );

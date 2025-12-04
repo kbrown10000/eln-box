@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getEntry, updateEntry, deleteEntry } from '@/lib/box/files';
+import { requireApiAuth } from '@/lib/auth/session';
 
 // GET /api/entries/:fileId
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ fileId: string }> }
 ) {
+  const { error } = await requireApiAuth();
+  if (error) return error;
+
   try {
     const { fileId } = await params;
     const entry = await getEntry(fileId);
@@ -24,6 +28,9 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ fileId: string }> }
 ) {
+  const { error } = await requireApiAuth();
+  if (error) return error;
+
   try {
     const { fileId } = await params;
     const body = await req.json();
@@ -53,6 +60,9 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ fileId: string }> }
 ) {
+  const { error } = await requireApiAuth();
+  if (error) return error;
+
   try {
     const { fileId } = await params;
     await deleteEntry(fileId);

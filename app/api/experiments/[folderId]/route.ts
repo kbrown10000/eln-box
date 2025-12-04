@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getExperiment, updateExperiment } from '@/lib/box/folders';
+import { requireApiAuth } from '@/lib/auth/session';
 
 // GET /api/experiments/:folderId
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ folderId: string }> }
 ) {
+  const { error } = await requireApiAuth();
+  if (error) return error;
+
   try {
     const { folderId } = await params;
     const experiment = await getExperiment(folderId);
@@ -24,6 +28,9 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ folderId: string }> }
 ) {
+  const { error } = await requireApiAuth();
+  if (error) return error;
+
   try {
     const { folderId } = await params;
     const body = await req.json();

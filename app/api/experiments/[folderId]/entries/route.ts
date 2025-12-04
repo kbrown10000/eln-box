@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { listEntries, createEntry } from '@/lib/box/files';
+import { requireApiAuth } from '@/lib/auth/session';
 
 // GET /api/experiments/:folderId/entries - List entries in an experiment
 // Query params: ?limit=50&offset=0
@@ -7,6 +8,9 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ folderId: string }> }
 ) {
+  const { error } = await requireApiAuth();
+  if (error) return error;
+
   try {
     const { folderId } = await params;
     const { searchParams } = new URL(req.url);
@@ -29,6 +33,9 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ folderId: string }> }
 ) {
+  const { error, session } = await requireApiAuth();
+  if (error) return error;
+
   try {
     const { folderId } = await params;
     const body = await req.json();
@@ -46,8 +53,8 @@ export async function POST(
       {
         entryId: body.entryId || `entry-${Date.now()}`,
         entryDate: body.entryDate || new Date().toISOString().split('T')[0],
-        authorName: body.authorName || 'Unknown',
-        authorEmail: body.authorEmail || '',
+        authorName: body.authorName || session!.user.name,
+        authorEmail: body.authorEmail || session!.user.email,
         title: body.title,
         entryType: body.entryType || 'observation',
         status: body.status || 'draft',
