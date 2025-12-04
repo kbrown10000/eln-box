@@ -468,7 +468,7 @@ export default function ExperimentClient({
         folderPath={['LabNoteX_Projects', experiment.experimentTitle || 'Experiment']}
         files={files}
         onNavigate={(id) => console.log('Navigate to folder:', id)}
-        onUpload={(file) => console.log('Upload file:', file.name)}
+        onFileUploaded={fetchFiles}
       />
     </div>
   );
