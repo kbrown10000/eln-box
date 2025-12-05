@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getEntry, updateEntry, deleteEntry } from '@/lib/box/files';
 import { requireApiAuth } from '@/lib/auth/session';
-import { getUserClient } from '@/lib/box/client';
-import { ensureProjectsRootAccess } from '@/lib/box/access';
+import { getBoxClient } from '@/lib/box/client';
 
 // GET /api/entries/:fileId
 export async function GET(
@@ -14,8 +13,7 @@ export async function GET(
 
   try {
     const { fileId } = await params;
-    await ensureProjectsRootAccess(session!.user.email);
-    const boxClient = getUserClient(session!.accessToken);
+    const boxClient = getBoxClient();
     const entry = await getEntry(boxClient, fileId);
     return NextResponse.json(entry);
   } catch (error) {
@@ -38,7 +36,7 @@ export async function PATCH(
   try {
     const { fileId } = await params;
     const body = await req.json();
-    const boxClient = getUserClient(session!.accessToken);
+    const boxClient = getBoxClient();
 
     const entry = await updateEntry(
       boxClient,
@@ -71,8 +69,7 @@ export async function DELETE(
 
   try {
     const { fileId } = await params;
-    await ensureProjectsRootAccess(session!.user.email);
-    const boxClient = getUserClient(session!.accessToken);
+    const boxClient = getBoxClient();
     await deleteEntry(boxClient, fileId);
     return NextResponse.json({ success: true });
   } catch (error) {

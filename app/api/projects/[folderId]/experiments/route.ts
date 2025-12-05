@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { listExperiments, createExperiment } from '@/lib/box/folders';
 import { requireApiAuth } from '@/lib/auth/session';
-import { getUserClient } from '@/lib/box/client';
-import { ensureProjectsRootAccess } from '@/lib/box/access';
+import { getBoxClient } from '@/lib/box/client';
 
 // GET /api/projects/:folderId/experiments - List experiments in a project
 // Query params: ?limit=50&offset=0
@@ -15,8 +14,7 @@ export async function GET(
 
   try {
     const { folderId } = await params;
-    await ensureProjectsRootAccess(session!.user.email);
-    const boxClient = getUserClient(session!.accessToken);
+    const boxClient = getBoxClient();
     const { searchParams } = new URL(req.url);
     const limit = parseInt(searchParams.get('limit') || '50', 10);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
@@ -42,8 +40,7 @@ export async function POST(
 
   try {
     const { folderId } = await params;
-    await ensureProjectsRootAccess(session!.user.email);
-    const boxClient = getUserClient(session!.accessToken);
+    const boxClient = getBoxClient();
     const body = await req.json();
 
     // Validate required fields

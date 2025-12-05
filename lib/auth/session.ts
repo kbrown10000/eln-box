@@ -1,8 +1,7 @@
 import { auth } from './config';
 import { redirect } from 'next/navigation';
 import { NextResponse } from 'next/server';
-import BoxSDK from 'box-node-sdk';
-import { ensureProjectsRootAccess } from '../box/access';
+import { getBoxClient } from '../box/client';
 
 /**
  * Get the current session (returns null if not authenticated)
@@ -70,15 +69,8 @@ export async function getAuthenticatedBoxClient() {
     redirect('/login');
   }
 
-  // Ensure the user has access to the Projects root so Box permissions allow listing/creating
-  await ensureProjectsRootAccess(session.user.email);
-
-  const sdk = new BoxSDK({
-    clientID: process.env.BOX_OAUTH_CLIENT_ID!,
-    clientSecret: process.env.BOX_OAUTH_CLIENT_SECRET!,
-  });
-
-  return sdk.getBasicClient(session.accessToken);
+  // Use service account (enterprise) client to ensure full access
+  return getBoxClient();
 }
 
 /**

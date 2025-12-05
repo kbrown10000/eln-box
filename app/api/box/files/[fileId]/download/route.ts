@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireApiAuth } from '@/lib/auth/session';
-import { getUserClient } from '@/lib/box/client';
-import { ensureProjectsRootAccess } from '@/lib/box/access';
+import { getBoxClient } from '@/lib/box/client';
 
 export async function GET(
   request: NextRequest,
@@ -13,8 +12,7 @@ export async function GET(
   const { fileId } = await params;
 
   try {
-    await ensureProjectsRootAccess(session!.user.email);
-    const boxClient = getUserClient(session!.accessToken);
+    const boxClient = getBoxClient();
 
     // Get download URL from Box
     const downloadUrl = await boxClient.files.getDownloadURL(fileId);
