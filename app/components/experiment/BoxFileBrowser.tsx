@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import BoxPreviewModal from '@/app/components/box/BoxPreviewModal';
 
 interface BoxFile {
   id: string;
@@ -29,7 +30,7 @@ export default function BoxFileBrowser({
 }: BoxFileBrowserProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [isDownloading, setIsDownloading] = useState<string | null>(null);
+  const [previewFile, setPreviewFile] = useState<{ id: string; name: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const formatFileSize = (bytes?: number) => {
@@ -166,24 +167,12 @@ export default function BoxFileBrowser({
       return;
     }
 
-    // Download/open file
-    setIsDownloading(file.id);
-    try {
-      const response = await fetch(`/api/box/files/${file.id}/download`);
-      if (!response.ok) {
-        throw new Error('Failed to get download URL');
-      }
+    // Open file in Box Preview modal
+    setPreviewFile({ id: file.id, name: file.name });
+  };
 
-      const { downloadUrl } = await response.json();
-
-      // Open in new tab
-      window.open(downloadUrl, '_blank');
-    } catch (err) {
-      console.error('Download error:', err);
-      alert('Failed to open file. Please try again.');
-    } finally {
-      setIsDownloading(null);
-    }
+  const handleClosePreview = () => {
+    setPreviewFile(null);
   };
 
   return (
@@ -279,14 +268,10 @@ export default function BoxFileBrowser({
                     </p>
                   )}
                 </div>
-                {isDownloading === file.id ? (
-                  <svg className="w-5 h-5 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                ) : file.type === 'file' ? (
-                  <svg className="w-5 h-5 text-gray-400 group-hover:text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                {file.type === 'file' ? (
+                  <svg className="w-5 h-5 text-gray-400 group-hover:text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-label="Preview file">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                   </svg>
                 ) : (
                   <svg className="w-5 h-5 text-gray-400 group-hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -298,6 +283,16 @@ export default function BoxFileBrowser({
           </ul>
         )}
       </div>
+
+      {/* Box Preview Modal */}
+      {previewFile && (
+        <BoxPreviewModal
+          fileId={previewFile.id}
+          fileName={previewFile.name}
+          isOpen={!!previewFile}
+          onClose={handleClosePreview}
+        />
+      )}
     </div>
   );
 }

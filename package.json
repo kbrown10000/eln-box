@@ -13,6 +13,7 @@
   "dependencies": {
     "@vercel/postgres": "^0.10.0",
     "box-node-sdk": "^3.4.0",
+    "box-ui-elements": "^25.3.0",
     "drizzle-kit": "^0.31.7",
     "drizzle-orm": "^0.44.7",
     "next": "^15.1.5",

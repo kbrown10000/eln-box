@@ -1,0 +1,45 @@
+// Global type declarations for Box UI Elements SDK
+
+declare global {
+  interface Window {
+    Box?: {
+      Preview: new () => {
+        show: (
+          fileId: string,
+          accessToken: string,
+          options: {
+            container: string;
+            showDownload?: boolean;
+            showAnnotations?: boolean;
+          }
+        ) => void;
+        hide: () => void;
+        destroy: () => void;
+      };
+      ContentExplorer: new () => {
+        show: (
+          folderId: string,
+          accessToken: string,
+          options: {
+            container: string;
+            logoUrl?: string;
+            canDownload?: boolean;
+            canUpload?: boolean;
+            canPreview?: boolean;
+            canDelete?: boolean;
+            canRename?: boolean;
+            canCreateNewFolder?: boolean;
+            canShare?: boolean;
+            canSetShareAccess?: boolean;
+            defaultView?: 'files' | 'recents';
+            sortBy?: string;
+            sortDirection?: 'ASC' | 'DESC';
+          }
+        ) => void;
+        hide: () => void;
+      };
+    };
+  }
+}
+
+export {};

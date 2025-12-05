@@ -1,5 +1,6 @@
 import { Project, Experiment } from '@/lib/box/types';
 import { getProject as getProjectFromBox, listExperiments } from '@/lib/box/folders';
+import ProjectTabs from './ProjectTabs';
 
 async function getProject(folderId: string): Promise<Project | null> {
   try {
@@ -89,73 +90,11 @@ export default async function ProjectDetailPage({
         </div>
       </div>
 
-      <div>
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold">Experiments</h2>
-          <a
-            href={`/projects/${folderId}/experiments/new`}
-            className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition"
-          >
-            + New Experiment
-          </a>
-        </div>
-
-        {experiments.length === 0 ? (
-          <div className="text-center py-12 bg-gray-50 rounded-lg">
-            <p className="text-gray-600 text-lg mb-4">No experiments yet</p>
-            <p className="text-gray-500">Create your first experiment to get started!</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {experiments.map((experiment) => (
-              <div
-                key={experiment.folderId}
-                className="border rounded-lg p-6 shadow hover:shadow-lg transition"
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-xl font-semibold">{experiment.experimentTitle}</h3>
-                  <span
-                    className={`px-3 py-1 rounded-full text-sm ${
-                      experiment.status === 'in-progress'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : experiment.status === 'completed'
-                        ? 'bg-green-100 text-green-800'
-                        : experiment.status === 'locked'
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}
-                  >
-                    {experiment.status}
-                  </span>
-                </div>
-
-                <p className="text-gray-600 text-sm mb-3">{experiment.experimentId}</p>
-
-                <p className="text-gray-700 mb-4 line-clamp-2">
-                  <strong>Objective:</strong> {experiment.objective || 'No objective specified'}
-                </p>
-
-                <div className="text-sm text-gray-600 space-y-1 mb-4">
-                  <p><strong>Owner:</strong> {experiment.ownerName || 'Not assigned'}</p>
-                  {experiment.startedAt && <p><strong>Started:</strong> {experiment.startedAt}</p>}
-                  {experiment.tags && experiment.tags.length > 0 && (
-                    <p>
-                      <strong>Tags:</strong> {experiment.tags.join(', ')}
-                    </p>
-                  )}
-                </div>
-
-                <a
-                  href={`/experiments/${experiment.folderId}`}
-                  className="text-blue-600 hover:underline font-medium"
-                >
-                  View Experiment →
-                </a>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      <ProjectTabs
+        project={project}
+        experiments={experiments}
+        folderId={folderId}
+      />
     </div>
   );
 }
