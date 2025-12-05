@@ -36,11 +36,10 @@ export async function GET(request: NextRequest) {
     const scopes = scopesParam.split(',');
     
     const downscopedToken = await client.exchangeToken(scopes, resource);
-    console.log('Successfully generated downscoped token:', downscopedToken);
 
     return NextResponse.json(downscopedToken);
   } catch (err: any) {
-    console.error('Token endpoint error details:', err); // Log full error object
+    console.error('Token endpoint error details:', err);
 
     return NextResponse.json(
       { error: 'Failed to get access token', details: err.message },
