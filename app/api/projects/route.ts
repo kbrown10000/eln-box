@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { listProjects, createProject } from '@/lib/box/folders';
 import { requireApiAuth } from '@/lib/auth/session';
 import { getUserClient } from '@/lib/box/client';
+import { ensureProjectsRootAccess } from '@/lib/box/access';
 
 // GET /api/projects - List all projects
 // Query params: ?limit=50&offset=0
@@ -10,6 +11,7 @@ export async function GET(req: NextRequest) {
   if (error) return error;
 
   try {
+    await ensureProjectsRootAccess(session!.user.email);
     const boxClient = getUserClient(session!.accessToken);
     const { searchParams } = new URL(req.url);
     const limit = parseInt(searchParams.get('limit') || '50', 10);
@@ -32,6 +34,7 @@ export async function POST(req: NextRequest) {
   if (error) return error;
 
   try {
+    await ensureProjectsRootAccess(session!.user.email);
     const boxClient = getUserClient(session!.accessToken);
     const body = await req.json();
 

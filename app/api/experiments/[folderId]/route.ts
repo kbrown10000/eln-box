@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getExperiment, updateExperiment } from '@/lib/box/folders';
 import { requireApiAuth } from '@/lib/auth/session';
 import { getUserClient } from '@/lib/box/client';
+import { ensureProjectsRootAccess } from '@/lib/box/access';
 
 // GET /api/experiments/:folderId
 export async function GET(
@@ -13,6 +14,7 @@ export async function GET(
 
   try {
     const { folderId } = await params;
+    await ensureProjectsRootAccess(session!.user.email);
     const boxClient = getUserClient(session!.accessToken);
     const experiment = await getExperiment(boxClient, folderId);
     return NextResponse.json(experiment);
@@ -36,6 +38,7 @@ export async function PATCH(
   try {
     const { folderId } = await params;
     const body = await req.json();
+    await ensureProjectsRootAccess(session!.user.email);
     const boxClient = getUserClient(session!.accessToken);
     const experiment = await updateExperiment(boxClient, folderId, body);
     return NextResponse.json(experiment);

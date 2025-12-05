@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireApiAuth } from '@/lib/auth/session';
 import { getUserClient } from '@/lib/box/client';
+import { ensureProjectsRootAccess } from '@/lib/box/access';
 
 export async function POST(
   request: NextRequest,
@@ -19,6 +20,7 @@ export async function POST(
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
+    await ensureProjectsRootAccess(session!.user.email);
     const boxClient = getUserClient(session!.accessToken);
 
     // Convert File to Buffer
