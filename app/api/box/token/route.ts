@@ -37,8 +37,7 @@ export async function GET(request: NextRequest) {
     const resourceId = fileId || folderId;
     const resource = `https://api.box.com/2.0/${resourceType}/${resourceId}`;
 
-    const scopes = scopesParam.split(',').map((s) => s.trim()).filter(Boolean);
-    const token = await getServiceAccountToken(scopes, resource);
+    const token = await getServiceAccountToken();
 
     return NextResponse.json(token);
   } catch (err: any) {
