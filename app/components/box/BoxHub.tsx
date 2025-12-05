@@ -63,7 +63,7 @@ export default function BoxHub({ folderId, folderName }: BoxHubProps) {
           const err = await tokenResponse.json();
           throw new Error(err.error || 'Failed to get access token');
         }
-        const { accessToken } = await tokenResponse.json();
+        const { access_token: accessToken } = await tokenResponse.json();
 
         // Clean up previous explorer instance
         if (explorerRef.current) {

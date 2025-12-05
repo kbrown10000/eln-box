@@ -117,16 +117,3 @@ export function getUserClient(accessToken: string): BoxClient {
 // Export singleton for convenience (enterprise service account)
 export const boxClient = getBoxClient;
 
-/**
- * Get a service account access token for Box UI Elements.
- * We return the full service account token to maximize compatibility.
- */
-export async function getServiceAccountToken(): Promise<{ accessToken: string; expiresIn: number; tokenType: string }> {
-  const client = getBoxClient();
-  const token = await client._session.getAccessToken();
-  return {
-    accessToken: token,
-    expiresIn: 3600,
-    tokenType: 'bearer',
-  };
-}
