@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getEntry, updateEntry, deleteEntry } from '@/lib/box/files';
 import { requireApiAuth } from '@/lib/auth/session';
+import { getUserClient } from '@/lib/box/client';
 
 // GET /api/entries/:fileId
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ fileId: string }> }
 ) {
-  const { error } = await requireApiAuth();
+  const { error, session } = await requireApiAuth();
   if (error) return error;
 
   try {
     const { fileId } = await params;
-    const entry = await getEntry(fileId);
+    const boxClient = getUserClient(session!.accessToken);
+    const entry = await getEntry(boxClient, fileId);
     return NextResponse.json(entry);
   } catch (error) {
     console.error('Error fetching entry:', error);
@@ -28,14 +30,16 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ fileId: string }> }
 ) {
-  const { error } = await requireApiAuth();
+  const { error, session } = await requireApiAuth();
   if (error) return error;
 
   try {
     const { fileId } = await params;
     const body = await req.json();
+    const boxClient = getUserClient(session!.accessToken);
 
     const entry = await updateEntry(
+      boxClient,
       fileId,
       body.content,
       {
@@ -60,12 +64,13 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ fileId: string }> }
 ) {
-  const { error } = await requireApiAuth();
+  const { error, session } = await requireApiAuth();
   if (error) return error;
 
   try {
     const { fileId } = await params;
-    await deleteEntry(fileId);
+    const boxClient = getUserClient(session!.accessToken);
+    await deleteEntry(boxClient, fileId);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting entry:', error);

@@ -1,6 +1,8 @@
 import BoxSDK from 'box-node-sdk';
 
-let cachedClient: any = null;
+export type BoxClient = any;
+
+let cachedClient: BoxClient | null = null;
 
 /**
  * Validate all required Box environment variables are present
@@ -91,5 +93,26 @@ export function getBoxClientForUser(userId: string) {
   return sdk.getAppAuthClient('user', userId);
 }
 
-// Export singleton for convenience
+/**
+ * Get a Box client scoped to the current user's OAuth access token.
+ * This enforces Box permissions for that user.
+ */
+export function getUserClient(accessToken: string): BoxClient {
+  if (!accessToken) {
+    throw new Error('Missing Box access token for user');
+  }
+
+  if (!process.env.BOX_OAUTH_CLIENT_ID || !process.env.BOX_OAUTH_CLIENT_SECRET) {
+    throw new Error('BOX_OAUTH_CLIENT_ID and BOX_OAUTH_CLIENT_SECRET are required for user Box clients');
+  }
+
+  const sdk = new BoxSDK({
+    clientID: process.env.BOX_OAUTH_CLIENT_ID!,
+    clientSecret: process.env.BOX_OAUTH_CLIENT_SECRET!,
+  });
+
+  return sdk.getBasicClient(accessToken);
+}
+
+// Export singleton for convenience (enterprise service account)
 export const boxClient = getBoxClient;

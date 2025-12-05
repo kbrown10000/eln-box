@@ -1,4 +1,4 @@
-import { getBoxClient } from './client';
+import type { BoxClient } from './client';
 import { Project, Experiment } from './types';
 
 /**
@@ -19,8 +19,7 @@ function getProjectsFolderId(): string {
 /**
  * Create a new project folder with metadata
  */
-export async function createProject(project: Omit<Project, 'folderId'>): Promise<Project> {
-  const client = getBoxClient();
+export async function createProject(client: BoxClient, project: Omit<Project, 'folderId'>): Promise<Project> {
   const projectsFolderId = getProjectsFolderId();
 
   // 1. Create folder under /Projects
@@ -57,9 +56,7 @@ export async function createProject(project: Omit<Project, 'folderId'>): Promise
 /**
  * Get project by folder ID
  */
-export async function getProject(folderId: string): Promise<Project> {
-  const client = getBoxClient();
-
+export async function getProject(client: BoxClient, folderId: string): Promise<Project> {
   try {
     const metadata = await client.metadata.getMetadataOnFolder(folderId, 'enterprise', 'projectMetadata');
 
@@ -119,8 +116,10 @@ const MAX_LIMIT = 100;
 /**
  * List all projects (query Box for folders with projectMetadata)
  */
-export async function listProjects(options: PaginationOptions = {}): Promise<PaginatedResult<Project>> {
-  const client = getBoxClient();
+export async function listProjects(
+  client: BoxClient,
+  options: PaginationOptions = {}
+): Promise<PaginatedResult<Project>> {
   const projectsFolderId = getProjectsFolderId();
 
   const limit = Math.min(options.limit || DEFAULT_LIMIT, MAX_LIMIT);
@@ -138,7 +137,7 @@ export async function listProjects(options: PaginationOptions = {}): Promise<Pag
   for (const item of items.entries) {
     if (item.type === 'folder') {
       try {
-        const project = await getProject(item.id);
+        const project = await getProject(client, item.id);
         projects.push(project);
       } catch (error) {
         console.error(`Failed to get project ${item.id}:`, error);
@@ -158,10 +157,10 @@ export async function listProjects(options: PaginationOptions = {}): Promise<Pag
  * Update project metadata
  */
 export async function updateProject(
+  client: BoxClient,
   folderId: string,
   updates: Partial<Omit<Project, 'folderId'>>
 ): Promise<Project> {
-  const client = getBoxClient();
 
   const operations: any[] = [];
 
@@ -197,18 +196,17 @@ export async function updateProject(
     }
   }
 
-  return getProject(folderId);
+  return getProject(client, folderId);
 }
 
 /**
  * Create experiment under a project
  */
 export async function createExperiment(
+  client: BoxClient,
   projectFolderId: string,
   experiment: Omit<Experiment, 'folderId'>
 ): Promise<Experiment> {
-  const client = getBoxClient();
-
   // Find Experiments subfolder
   const items = await client.folders.getItems(projectFolderId);
   const experimentsFolder = items.entries.find((e: any) => e.name === 'Experiments');
@@ -257,9 +255,7 @@ export async function createExperiment(
 /**
  * Get experiment by folder ID
  */
-export async function getExperiment(folderId: string): Promise<Experiment> {
-  const client = getBoxClient();
-
+export async function getExperiment(client: BoxClient, folderId: string): Promise<Experiment> {
   try {
     const metadata = await client.metadata.getMetadataOnFolder(folderId, 'enterprise', 'experimentMetadata');
 
@@ -301,11 +297,10 @@ export async function getExperiment(folderId: string): Promise<Experiment> {
  * List experiments in a project
  */
 export async function listExperiments(
+  client: BoxClient,
   projectFolderId: string,
   options: PaginationOptions = {}
 ): Promise<PaginatedResult<Experiment>> {
-  const client = getBoxClient();
-
   const limit = Math.min(options.limit || DEFAULT_LIMIT, MAX_LIMIT);
   const offset = options.offset || 0;
 
@@ -328,7 +323,7 @@ export async function listExperiments(
   for (const item of experimentItems.entries) {
     if (item.type === 'folder') {
       try {
-        const experiment = await getExperiment(item.id);
+        const experiment = await getExperiment(client, item.id);
         experiments.push(experiment);
       } catch (error) {
         console.error(`Failed to get experiment ${item.id}:`, error);
@@ -348,10 +343,10 @@ export async function listExperiments(
  * Update experiment metadata
  */
 export async function updateExperiment(
+  client: BoxClient,
   folderId: string,
   updates: Partial<Omit<Experiment, 'folderId'>>
 ): Promise<Experiment> {
-  const client = getBoxClient();
 
   const operations: any[] = [];
 
@@ -393,5 +388,5 @@ export async function updateExperiment(
     }
   }
 
-  return getExperiment(folderId);
+  return getExperiment(client, folderId);
 }

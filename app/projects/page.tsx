@@ -1,9 +1,11 @@
 import { Project } from '@/lib/box/types';
 import { listProjects } from '@/lib/box/folders';
+import { getAuthenticatedBoxClient } from '@/lib/auth/session';
 
 async function getProjects(): Promise<Project[]> {
   try {
-    const result = await listProjects();
+    const client = await getAuthenticatedBoxClient();
+    const result = await listProjects(client);
     return result.items;
   } catch (error) {
     console.error('Error fetching projects:', error);

@@ -1,4 +1,4 @@
-import { getBoxClient } from './client';
+import type { BoxClient } from './client';
 import { Entry } from './types';
 import { PaginationOptions, PaginatedResult } from './folders';
 import { Readable } from 'stream';
@@ -10,12 +10,11 @@ const MAX_LIMIT = 100;
  * Create a new entry as a markdown file
  */
 export async function createEntry(
+  client: BoxClient,
   experimentFolderId: string,
   entry: Omit<Entry, 'fileId'>,
   content: string
 ): Promise<Entry> {
-  const client = getBoxClient();
-
   // Find Entries subfolder
   const items = await client.folders.getItems(experimentFolderId);
   const entriesFolder = items.entries.find((e: any) => e.name === 'Entries');
@@ -57,9 +56,7 @@ export async function createEntry(
 /**
  * Get entry content and metadata
  */
-export async function getEntry(fileId: string): Promise<Entry> {
-  const client = getBoxClient();
-
+export async function getEntry(client: BoxClient, fileId: string): Promise<Entry> {
   let metadata: any = {};
 
   // Get metadata
@@ -103,11 +100,11 @@ export async function getEntry(fileId: string): Promise<Entry> {
  * Update entry content (creates new version)
  */
 export async function updateEntry(
+  client: BoxClient,
   fileId: string,
   content: string,
   metadataUpdates: Partial<Entry>
 ): Promise<Entry> {
-  const client = getBoxClient();
 
   // Upload new version
   const buffer = Buffer.from(content, 'utf-8');
@@ -138,18 +135,17 @@ export async function updateEntry(
     console.warn('Failed to update entry metadata:', error);
   }
 
-  return getEntry(fileId);
+  return getEntry(client, fileId);
 }
 
 /**
  * List entries in an experiment
  */
 export async function listEntries(
+  client: BoxClient,
   experimentFolderId: string,
   options: PaginationOptions = {}
 ): Promise<PaginatedResult<Entry>> {
-  const client = getBoxClient();
-
   const limit = Math.min(options.limit || DEFAULT_LIMIT, MAX_LIMIT);
   const offset = options.offset || 0;
 
@@ -172,7 +168,7 @@ export async function listEntries(
   for (const item of entryItems.entries) {
     if (item.type === 'file' && item.name.endsWith('.md')) {
       try {
-        const entry = await getEntry(item.id);
+        const entry = await getEntry(client, item.id);
         entries.push(entry);
       } catch (error) {
         console.error(`Failed to get entry ${item.id}:`, error);
@@ -192,11 +188,11 @@ export async function listEntries(
  * Sign an entry (update metadata with signature hash)
  */
 export async function signEntry(
+  client: BoxClient,
   fileId: string,
   signedBy: string,
   signatureHash: string
 ): Promise<Entry> {
-  const client = getBoxClient();
 
   try {
     await client.files.updateMetadata(fileId, 'enterprise', 'entryMetadata', [
@@ -210,13 +206,12 @@ export async function signEntry(
     throw error;
   }
 
-  return getEntry(fileId);
+  return getEntry(client, fileId);
 }
 
 /**
  * Delete an entry
  */
-export async function deleteEntry(fileId: string): Promise<void> {
-  const client = getBoxClient();
+export async function deleteEntry(client: BoxClient, fileId: string): Promise<void> {
   await client.files.delete(fileId);
 }

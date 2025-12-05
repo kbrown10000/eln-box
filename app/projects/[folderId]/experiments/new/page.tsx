@@ -1,11 +1,12 @@
-import { requireAuth } from '@/lib/auth/session';
+import { requireAuth, getAuthenticatedBoxClient } from '@/lib/auth/session';
 import { getProject as getProjectFromBox } from '@/lib/box/folders';
 import NewExperimentForm from './NewExperimentForm';
 import Link from 'next/link';
 
 async function getProject(folderId: string) {
   try {
-    return await getProjectFromBox(folderId);
+    const client = await getAuthenticatedBoxClient();
+    return await getProjectFromBox(client, folderId);
   } catch (error) {
     console.error('Error fetching project:', error);
     return null;

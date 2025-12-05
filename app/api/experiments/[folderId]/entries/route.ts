@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { listEntries, createEntry } from '@/lib/box/files';
 import { requireApiAuth } from '@/lib/auth/session';
+import { getUserClient } from '@/lib/box/client';
 
 // GET /api/experiments/:folderId/entries - List entries in an experiment
 // Query params: ?limit=50&offset=0
@@ -8,16 +9,17 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ folderId: string }> }
 ) {
-  const { error } = await requireApiAuth();
+  const { error, session } = await requireApiAuth();
   if (error) return error;
 
   try {
     const { folderId } = await params;
+    const boxClient = getUserClient(session!.accessToken);
     const { searchParams } = new URL(req.url);
     const limit = parseInt(searchParams.get('limit') || '50', 10);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
 
-    const result = await listEntries(folderId, { limit, offset });
+    const result = await listEntries(boxClient, folderId, { limit, offset });
     return NextResponse.json(result);
   } catch (error) {
     console.error('Error fetching entries:', error);
@@ -38,6 +40,7 @@ export async function POST(
 
   try {
     const { folderId } = await params;
+    const boxClient = getUserClient(session!.accessToken);
     const body = await req.json();
 
     // Validate required fields
@@ -49,6 +52,7 @@ export async function POST(
     }
 
     const entry = await createEntry(
+      boxClient,
       folderId,
       {
         entryId: body.entryId || `entry-${Date.now()}`,

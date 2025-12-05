@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { listProjects, createProject } from '@/lib/box/folders';
 import { requireApiAuth } from '@/lib/auth/session';
+import { getUserClient } from '@/lib/box/client';
 
 // GET /api/projects - List all projects
 // Query params: ?limit=50&offset=0
@@ -9,11 +10,12 @@ export async function GET(req: NextRequest) {
   if (error) return error;
 
   try {
+    const boxClient = getUserClient(session!.accessToken);
     const { searchParams } = new URL(req.url);
     const limit = parseInt(searchParams.get('limit') || '50', 10);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
 
-    const result = await listProjects({ limit, offset });
+    const result = await listProjects(boxClient, { limit, offset });
     return NextResponse.json(result);
   } catch (error) {
     console.error('Error fetching projects:', error);
@@ -30,6 +32,7 @@ export async function POST(req: NextRequest) {
   if (error) return error;
 
   try {
+    const boxClient = getUserClient(session!.accessToken);
     const body = await req.json();
 
     // Validate required fields
@@ -40,7 +43,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const project = await createProject({
+    const project = await createProject(boxClient, {
       projectCode: body.projectCode,
       projectName: body.projectName,
       piName: body.piName || session!.user.name,

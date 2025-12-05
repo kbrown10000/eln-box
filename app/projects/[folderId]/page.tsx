@@ -1,10 +1,12 @@
 import { Project, Experiment } from '@/lib/box/types';
 import { getProject as getProjectFromBox, listExperiments } from '@/lib/box/folders';
+import { getAuthenticatedBoxClient } from '@/lib/auth/session';
 import ProjectTabs from './ProjectTabs';
 
 async function getProject(folderId: string): Promise<Project | null> {
   try {
-    return await getProjectFromBox(folderId);
+    const client = await getAuthenticatedBoxClient();
+    return await getProjectFromBox(client, folderId);
   } catch (error) {
     console.error('Error fetching project:', error);
     return null;
@@ -13,7 +15,8 @@ async function getProject(folderId: string): Promise<Project | null> {
 
 async function getExperiments(folderId: string): Promise<Experiment[]> {
   try {
-    const result = await listExperiments(folderId);
+    const client = await getAuthenticatedBoxClient();
+    const result = await listExperiments(client, folderId);
     return result.items;
   } catch (error) {
     console.error('Error fetching experiments:', error);

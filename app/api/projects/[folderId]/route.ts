@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProject, updateProject, listExperiments } from '@/lib/box/folders';
 import { requireApiAuth } from '@/lib/auth/session';
+import { getUserClient } from '@/lib/box/client';
 
 // GET /api/projects/:folderId
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ folderId: string }> }
 ) {
-  const { error } = await requireApiAuth();
+  const { error, session } = await requireApiAuth();
   if (error) return error;
 
   try {
     const { folderId } = await params;
-    const project = await getProject(folderId);
+    const boxClient = getUserClient(session!.accessToken);
+    const project = await getProject(boxClient, folderId);
     return NextResponse.json(project);
   } catch (error) {
     console.error('Error fetching project:', error);
@@ -28,13 +30,14 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ folderId: string }> }
 ) {
-  const { error } = await requireApiAuth();
+  const { error, session } = await requireApiAuth();
   if (error) return error;
 
   try {
     const { folderId } = await params;
     const body = await req.json();
-    const project = await updateProject(folderId, body);
+    const boxClient = getUserClient(session!.accessToken);
+    const project = await updateProject(boxClient, folderId, body);
     return NextResponse.json(project);
   } catch (error) {
     console.error('Error updating project:', error);

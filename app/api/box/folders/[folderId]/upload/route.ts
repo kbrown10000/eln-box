@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireApiAuth } from '@/lib/auth/session';
-import { getBoxClient } from '@/lib/box/client';
+import { getUserClient } from '@/lib/box/client';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ folderId: string }> }
 ) {
-  const { error } = await requireApiAuth();
+  const { error, session } = await requireApiAuth();
   if (error) return error;
 
   const { folderId } = await params;
@@ -19,7 +19,7 @@ export async function POST(
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    const boxClient = getBoxClient();
+    const boxClient = getUserClient(session!.accessToken);
 
     // Convert File to Buffer
     const arrayBuffer = await file.arrayBuffer();

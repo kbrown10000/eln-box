@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireApiAuth } from '@/lib/auth/session';
-import { getBoxClient } from '@/lib/box/client';
+import { getUserClient } from '@/lib/box/client';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ folderId: string }> }
 ) {
-  const { error } = await requireApiAuth();
+  const { error, session } = await requireApiAuth();
   if (error) return error;
 
   const { folderId } = await params;
 
   try {
-    const boxClient = getBoxClient();
+    const boxClient = getUserClient(session!.accessToken);
     const folder = await boxClient.folders.getItems(folderId, {
       fields: 'id,name,type,size,modified_at,created_at',
     });

@@ -1,12 +1,13 @@
 import { Experiment } from '@/lib/box/types';
 import { getExperiment as getExperimentFromBox } from '@/lib/box/folders';
-import { requireAuth } from '@/lib/auth/session';
+import { requireAuth, getAuthenticatedBoxClient } from '@/lib/auth/session';
 import Link from 'next/link';
 import ExperimentClient from './ExperimentClient';
 
 async function getExperiment(folderId: string): Promise<Experiment | null> {
   try {
-    return await getExperimentFromBox(folderId);
+    const client = await getAuthenticatedBoxClient();
+    return await getExperimentFromBox(client, folderId);
   } catch (error) {
     console.error('Error fetching experiment:', error);
     return null;
