@@ -116,3 +116,36 @@ export function getUserClient(accessToken: string): BoxClient {
 
 // Export singleton for convenience (enterprise service account)
 export const boxClient = getBoxClient;
+
+/**
+ * Get a service account token, optionally downscoped to specific scopes/resource.
+ * Falls back to the current service account access token on failure.
+ */
+export async function getServiceAccountToken(
+  scopes: string[] = ['item_preview', 'item_read', 'item_download'],
+  resource?: string
+): Promise<{ accessToken: string; expiresIn: number; tokenType: string }> {
+  const client = getBoxClient();
+
+  // Try downscoping first (preferred)
+  try {
+    const tokenInfo = await client.exchangeToken(scopes, resource ? { resource } : undefined);
+    if (tokenInfo?.accessToken) {
+      return {
+        accessToken: tokenInfo.accessToken,
+        expiresIn: tokenInfo.expiresIn ?? 3600,
+        tokenType: 'bearer',
+      };
+    }
+  } catch (err) {
+    console.warn('Service account token downscope failed, falling back to full token:', err);
+  }
+
+  // Fallback: use the existing service account token
+  const fallbackToken = await client._session.getAccessToken();
+  return {
+    accessToken: fallbackToken,
+    expiresIn: 3600,
+    tokenType: 'bearer',
+  };
+}
