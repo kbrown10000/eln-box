@@ -20,9 +20,9 @@ const robotoSlab = Roboto_Slab({
 });
 
 export const metadata: Metadata = {
-  title: "LabNoteX - Secure, Cloud-Based Research",
+  title: "Synapse - The Intelligent Lab OS",
   description:
-    "Seamlessly manage your experiments, data, and collaboration with our Vercel-deployed platform. Securely store and access all content via your trusted Box account.",
+    "The operating system for modern science. AI-powered, Box-centric, and GxP compliant.",
 };
 
 export default function RootLayout({
@@ -35,42 +35,46 @@ export default function RootLayout({
       <body className="font-body antialiased">
         <AuthProvider>
           <BoxClientProvider>
-            <header className="bg-primary text-white shadow-md"> {/* Updated header background and text color */}
+            <header className="bg-primary text-white shadow-md border-b border-cyan-900">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
               <div className="flex h-16 justify-between">
                 <div className="flex">
-                  <div className="flex flex-shrink-0 items-center">
-                    <a href="/" className="flex items-center">
-                      <BeakerIcon /> {/* Use BeakerIcon component */}
-                      <span className="ml-2 text-xl font-bold font-heading"> {/* Apply font-heading */}
-                        LabNoteX
+                  <div className="flex flex-shrink-0 items-center gap-3">
+                    <a href="/" className="flex items-center gap-2 group">
+                      <div className="relative w-8 h-8">
+                         {/* Abstract Synapse Logo Placeholder */}
+                         <div className="absolute inset-0 bg-cyan-500 rounded-full opacity-75 group-hover:animate-pulse"></div>
+                         <div className="absolute inset-1 bg-white rounded-full"></div>
+                      </div>
+                      <span className="text-2xl font-bold font-heading tracking-tight">
+                        Synapse
                       </span>
                     </a>
                   </div>
-                  <div className="hidden sm:-my-px sm:ml-8 sm:flex sm:space-x-6">
+                  <div className="hidden sm:-my-px sm:ml-10 sm:flex sm:space-x-8">
                     <a
                       href="/"
-                      className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-body hover:border-gray-300 hover:text-gray-200"
+                      className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium hover:border-cyan-400 hover:text-cyan-400 transition-colors"
                     >
-                      Home
+                      Vision
                     </a>
                     <a
                       href="/dashboard"
-                      className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-body hover:border-gray-300 hover:text-gray-200"
+                      className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium hover:border-cyan-400 hover:text-cyan-400 transition-colors"
                     >
                       Dashboard
                     </a>
                     <a
                       href="/projects"
-                      className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-body hover:border-gray-300 hover:text-gray-200"
+                      className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium hover:border-cyan-400 hover:text-cyan-400 transition-colors"
                     >
                       Projects
                     </a>
                     <a
                       href="/about"
-                      className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-body hover:border-gray-300 hover:text-gray-200"
+                      className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium hover:border-cyan-400 hover:text-cyan-400 transition-colors"
                     >
-                      About
+                      Platform
                     </a>
                   </div>
                 </div>
@@ -81,22 +85,21 @@ export default function RootLayout({
               </div>
             </div>
           </header>
-          <main className="min-h-screen bg-secondary"> {/* Updated main background */}
+          <main className="min-h-screen bg-secondary selection:bg-cyan-200 selection:text-cyan-900">
             {children}
           </main>
-          <footer className="bg-primary text-white border-t border-border-light"> {/* Updated footer background and text color */}
+          <footer className="bg-primary text-slate-400 border-t border-slate-800">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-              <div className="py-4 flex justify-between items-center text-sm font-body">
-                <div>
-                  <span>&copy; 2024 LabNoteX. All rights reserved.</span>
+              <div className="py-8 flex flex-col md:flex-row justify-between items-center text-sm">
+                <div className="mb-4 md:mb-0">
+                  <span className="font-heading font-bold text-white text-lg">Synapse</span>
+                  <span className="mx-2">|</span>
+                  <span>&copy; 2025 USDM Life Sciences.</span>
                 </div>
-                <div className="flex items-center space-x-3">
-                  <span className="font-medium">Powered by</span>
-                  <span className="font-bold text-white">USDM Life Sciences</span>
-                  <span className="text-gray-400">+</span>
-                  <span className="font-medium">Vercel</span>
-                  <span className="text-gray-400">+</span>
-                  <span className="font-bold text-white">box</span> {/* Changed to white for contrast */}
+                <div className="flex items-center space-x-6">
+                  <span className="hover:text-white transition-colors cursor-pointer">Privacy</span>
+                  <span className="hover:text-white transition-colors cursor-pointer">Terms</span>
+                  <span className="hover:text-white transition-colors cursor-pointer">Compliance</span>
                 </div>
               </div>
             </div>
