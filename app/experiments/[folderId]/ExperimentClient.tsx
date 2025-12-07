@@ -14,6 +14,8 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import IngestionReview from '@/app/components/experiment/IngestionReview';
 import ProtocolGeneratorModal from '@/app/components/experiment/ProtocolGeneratorModal';
+// Force recompile: 2025-12-07
+
 
 interface ExperimentClientProps {
   experiment: Experiment;
