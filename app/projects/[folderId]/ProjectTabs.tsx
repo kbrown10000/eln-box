@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import BoxHub from '@/app/components/box/BoxHub';
 import { Project, Experiment } from '@/lib/box/types';
+import AuditLog from './AuditLog';
 
 interface ProjectTabsProps {
   project: Project;
@@ -10,7 +11,7 @@ interface ProjectTabsProps {
   folderId: string;
 }
 
-type TabType = 'experiments' | 'files';
+type TabType = 'experiments' | 'files' | 'audit';
 
 export default function ProjectTabs({ project, experiments, folderId }: ProjectTabsProps) {
   const [activeTab, setActiveTab] = useState<TabType>('experiments');
@@ -50,6 +51,21 @@ export default function ProjectTabs({ project, experiments, folderId }: ProjectT
               <path d="M3 3h18v18H3V3zm16 16V5H5v14h14z" />
             </svg>
             Project Hub
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab('audit')}
+          className={`px-6 py-3 font-medium text-sm transition-colors ${
+            activeTab === 'audit'
+              ? 'text-blue-600 border-b-2 border-blue-600'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <span className="flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            Audit Trail
           </span>
         </button>
       </div>
@@ -130,6 +146,10 @@ export default function ProjectTabs({ project, experiments, folderId }: ProjectT
           folderId={folderId}
           folderName={project.projectName}
         />
+      )}
+
+      {activeTab === 'audit' && (
+        <AuditLog projectFolderId={folderId} />
       )}
     </div>
   );

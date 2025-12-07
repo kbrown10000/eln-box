@@ -3,6 +3,8 @@ import { requireApiAuth } from '@/lib/auth/session';
 import { db } from '@/lib/db';
 import { experiments, protocolSteps } from '@/lib/db/schema';
 import { eq, and, asc, max } from 'drizzle-orm';
+import { logActivity } from '@/lib/actions/audit';
+import { ensureExperimentNotLocked, ExperimentLockedError } from '@/lib/experiments/checks';
 
 // POST - Add a new protocol step
 export async function POST(
@@ -13,6 +15,16 @@ export async function POST(
   if (error) return error;
 
   const { boxFolderId } = await params;
+
+  try {
+    await ensureExperimentNotLocked(boxFolderId);
+  } catch (err) {
+    if (err instanceof ExperimentLockedError) {
+      return NextResponse.json({ error: err.message }, { status: 403 });
+    }
+    throw err;
+  }
+
   const body = await request.json();
 
   try {
@@ -44,6 +56,12 @@ export async function POST(
       })
       .returning();
 
+    await logActivity('add_protocol_step', 'experiment', boxFolderId, {
+      stepId: newStep.id,
+      stepNumber: newStep.stepNumber,
+      instruction: newStep.instruction?.substring(0, 50)
+    });
+
     return NextResponse.json(newStep);
   } catch (err) {
     console.error('Error adding protocol step:', err);
@@ -59,6 +77,17 @@ export async function PUT(
   const { error } = await requireApiAuth();
   if (error) return error;
 
+  const { boxFolderId } = await params;
+
+  try {
+    await ensureExperimentNotLocked(boxFolderId);
+  } catch (err) {
+    if (err instanceof ExperimentLockedError) {
+      return NextResponse.json({ error: err.message }, { status: 403 });
+    }
+    throw err;
+  }
+
   const body = await request.json();
 
   try {
@@ -71,6 +100,11 @@ export async function PUT(
       })
       .where(eq(protocolSteps.id, body.id))
       .returning();
+
+    await logActivity('update_protocol_step', 'experiment', boxFolderId, {
+      stepId: updatedStep.id,
+      stepNumber: updatedStep.stepNumber
+    });
 
     return NextResponse.json(updatedStep);
   } catch (err) {
@@ -87,7 +121,19 @@ export async function DELETE(
   const { error } = await requireApiAuth();
   if (error) return error;
 
+  const { boxFolderId } = await params;
+
+  try {
+    await ensureExperimentNotLocked(boxFolderId);
+  } catch (err) {
+    if (err instanceof ExperimentLockedError) {
+      return NextResponse.json({ error: err.message }, { status: 403 });
+    }
+    throw err;
+  }
+
   const { searchParams } = new URL(request.url);
+
   const stepId = searchParams.get('id');
 
   if (!stepId) {
@@ -96,6 +142,11 @@ export async function DELETE(
 
   try {
     await db.delete(protocolSteps).where(eq(protocolSteps.id, stepId));
+
+    await logActivity('delete_protocol_step', 'experiment', boxFolderId, {
+      stepId: stepId
+    });
+
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error('Error deleting protocol step:', err);

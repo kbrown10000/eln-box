@@ -23,17 +23,20 @@ export async function createProject(client: BoxClient, project: Omit<Project, 'f
   const projectsFolderId = getProjectsFolderId();
 
   // 1. Create folder under /Projects
-  const folder = await client.folders.create(
-    projectsFolderId,
-    `${project.projectCode}-${project.projectName.replace(/\s+/g, '-')}`
-  );
+  const folder = await client.folders.createFolder({
+    parent: { id: projectsFolderId },
+    name: `${project.projectCode}-${project.projectName.replace(/\s+/g, '-')}`
+  });
 
   // 2. Create subfolders
-  await client.folders.create(folder.id, 'Experiments');
+  await client.folders.createFolder({
+    parent: { id: folder.id },
+    name: 'Experiments'
+  });
 
   // 3. Apply metadata template
   try {
-    await client.metadata.createMetadataOnFolder(folder.id, 'enterprise', 'projectMetadata', {
+    await client.folderMetadata.createFolderMetadataById(folder.id, 'enterprise', 'projectMetadata', {
       projectCode: project.projectCode,
       projectName: project.projectName,
       piName: project.piName,
@@ -58,7 +61,7 @@ export async function createProject(client: BoxClient, project: Omit<Project, 'f
  */
 export async function getProject(client: BoxClient, folderId: string): Promise<Project> {
   try {
-    const metadata = await client.metadata.getMetadataOnFolder(folderId, 'enterprise', 'projectMetadata');
+    const metadata: any = await client.folderMetadata.getFolderMetadataById(folderId, 'enterprise', 'projectMetadata');
 
     return {
       folderId,
@@ -73,10 +76,10 @@ export async function getProject(client: BoxClient, folderId: string): Promise<P
     };
   } catch (error) {
     // If metadata doesn't exist, fall back to folder name parsing
-    const folder = await client.folders.get(folderId);
-    const nameParts = folder.name.split('-');
+    const folder = await client.folders.getFolderById(folderId);
+    const nameParts = folder.name!.split('-');
     const projectCode = nameParts[0] || 'UNKNOWN';
-    const projectName = nameParts.slice(1).join(' ') || folder.name;
+    const projectName = nameParts.slice(1).join(' ') || folder.name!;
 
     return {
       folderId,
@@ -85,7 +88,7 @@ export async function getProject(client: BoxClient, folderId: string): Promise<P
       piName: '',
       piEmail: '',
       department: '',
-      startDate: folder.created_at,
+      startDate: folder.createdAt,
       status: 'planning',
       description: '',
     };
@@ -126,8 +129,8 @@ export async function listProjects(
   // Fallback logic using N+1 iteration (reliable but slow)
   const executeFallback = async () => {
     const projectsFolderId = getProjectsFolderId();
-    const items = await client.folders.getItems(projectsFolderId, {
-      fields: 'name,created_at,modified_at',
+    const items = await client.folders.getFolderItems(projectsFolderId, {
+      fields: ['name', 'created_at', 'modified_at'],
       limit,
       offset,
     });
@@ -145,7 +148,7 @@ export async function listProjects(
     }
     return {
       items: projects,
-      totalCount: items.total_count,
+      totalCount: items.totalCount || items.entries.length,
       limit,
       offset,
     };
@@ -162,34 +165,23 @@ export async function listProjects(
     // Optimistic Metadata Query
     // Note: This requires the template to be indexed.
 
-    // Attempt to use SDK method for metadata query
-    let results;
-    
-    // Check if method exists (it is 'query' in box-node-sdk)
-    if (client.metadata && typeof client.metadata.query === 'function') {
-       results = await client.metadata.query(
-         "enterprise.projectMetadata", 
-         projectsFolderId,
-         {
-           query: "projectCode IS NOT NULL",
-           fields: [
-             "name", "created_at", 
-             "metadata.enterprise.projectMetadata.projectCode",
-             "metadata.enterprise.projectMetadata.projectName",
-             "metadata.enterprise.projectMetadata.piName",
-             "metadata.enterprise.projectMetadata.piEmail",
-             "metadata.enterprise.projectMetadata.department",
-             "metadata.enterprise.projectMetadata.startDate",
-             "metadata.enterprise.projectMetadata.status",
-             "metadata.enterprise.projectMetadata.description"
-           ],
-           limit
-         }
-       );
-    } else {
-       console.warn('Metadata Query API (client.metadata.query) is missing. Available keys on client.metadata:', client.metadata ? Object.keys(client.metadata) : 'client.metadata is undefined');
-       throw new Error("Metadata Query API not available on client");
-    }
+    const results = await client.search.searchByMetadataQuery({
+      from: "enterprise.projectMetadata",
+      ancestorFolderId: projectsFolderId,
+      query: "projectCode IS NOT NULL",
+      fields: [
+        "name", "created_at", 
+        "metadata.enterprise.projectMetadata.projectCode",
+        "metadata.enterprise.projectMetadata.projectName",
+        "metadata.enterprise.projectMetadata.piName",
+        "metadata.enterprise.projectMetadata.piEmail",
+        "metadata.enterprise.projectMetadata.department",
+        "metadata.enterprise.projectMetadata.startDate",
+        "metadata.enterprise.projectMetadata.status",
+        "metadata.enterprise.projectMetadata.description"
+      ],
+      limit
+    });
 
     const projects = results.entries.map((item: any) => {
       const md = item.metadata?.enterprise?.projectMetadata || {};
@@ -201,7 +193,7 @@ export async function listProjects(
         piName: md.piName || '',
         piEmail: md.piEmail || '',
         department: md.department || '',
-        startDate: md.startDate || item.created_at,
+        startDate: md.startDate || item.createdAt || item.created_at,
         status: md.status || 'planning',
         description: md.description || ''
       };
@@ -253,7 +245,7 @@ export async function updateProject(
 
   if (operations.length > 0) {
     try {
-      await client.metadata.updateMetadataOnFolder(
+      await client.folderMetadata.updateFolderMetadataById(
         folderId,
         'enterprise',
         'projectMetadata',
@@ -276,7 +268,7 @@ export async function createExperiment(
   experiment: Omit<Experiment, 'folderId'>
 ): Promise<Experiment> {
   // Find Experiments subfolder
-  const items = await client.folders.getItems(projectFolderId);
+  const items = await client.folders.getFolderItems(projectFolderId);
   const experimentsFolder = items.entries.find((e: any) => e.name === 'Experiments');
 
   if (!experimentsFolder) {
@@ -284,23 +276,23 @@ export async function createExperiment(
   }
 
   // Create experiment folder
-  const folder = await client.folders.create(
-    experimentsFolder.id,
-    `${experiment.experimentId}-${experiment.experimentTitle.replace(/\s+/g, '-')}`
-  );
+  const folder = await client.folders.createFolder({
+    parent: { id: experimentsFolder.id },
+    name: `${experiment.experimentId}-${experiment.experimentTitle.replace(/\s+/g, '-')}`
+  });
 
   // Create subfolders
-  await client.folders.create(folder.id, 'Entries');
-  const attachmentsFolder = await client.folders.create(folder.id, 'Attachments');
+  await client.folders.createFolder({ parent: { id: folder.id }, name: 'Entries' });
+  const attachmentsFolder = await client.folders.createFolder({ parent: { id: folder.id }, name: 'Attachments' });
 
   // Create subfolders under Attachments
-  await client.folders.create(attachmentsFolder.id, 'Raw-Data');
-  await client.folders.create(attachmentsFolder.id, 'Images');
-  await client.folders.create(attachmentsFolder.id, 'Reports');
+  await client.folders.createFolder({ parent: { id: attachmentsFolder.id }, name: 'Raw-Data' });
+  await client.folders.createFolder({ parent: { id: attachmentsFolder.id }, name: 'Images' });
+  await client.folders.createFolder({ parent: { id: attachmentsFolder.id }, name: 'Reports' });
 
   // Apply metadata
   try {
-    await client.metadata.createMetadataOnFolder(folder.id, 'enterprise', 'experimentMetadata', {
+    await client.folderMetadata.createFolderMetadataById(folder.id, 'enterprise', 'experimentMetadata', {
       experimentId: experiment.experimentId,
       experimentTitle: experiment.experimentTitle,
       objective: experiment.objective,
@@ -325,7 +317,7 @@ export async function createExperiment(
  */
 export async function getExperiment(client: BoxClient, folderId: string): Promise<Experiment> {
   try {
-    const metadata = await client.metadata.getMetadataOnFolder(folderId, 'enterprise', 'experimentMetadata');
+    const metadata: any = await client.folderMetadata.getFolderMetadataById(folderId, 'enterprise', 'experimentMetadata');
 
     return {
       folderId,
@@ -342,10 +334,10 @@ export async function getExperiment(client: BoxClient, folderId: string): Promis
     };
   } catch (error) {
     // Fallback to folder name parsing
-    const folder = await client.folders.get(folderId);
-    const nameParts = folder.name.split('-');
+    const folder = await client.folders.getFolderById(folderId);
+    const nameParts = folder.name!.split('-');
     const experimentId = nameParts[0] || 'UNKNOWN';
-    const experimentTitle = nameParts.slice(1).join(' ') || folder.name;
+    const experimentTitle = nameParts.slice(1).join(' ') || folder.name!;
 
     return {
       folderId,
@@ -376,7 +368,7 @@ export async function listExperiments(
   // We could optimize this too, but it's just one call.
   let experimentsFolderId: string | null = null;
   try {
-      const items = await client.folders.getItems(projectFolderId);
+      const items = await client.folders.getFolderItems(projectFolderId);
       const experimentsFolder = items.entries.find((e: any) => e.name === 'Experiments');
       if (experimentsFolder) {
           experimentsFolderId = experimentsFolder.id;
@@ -391,7 +383,7 @@ export async function listExperiments(
 
   // Fallback logic
   const executeFallback = async () => {
-      const experimentItems = await client.folders.getItems(experimentsFolderId!, {
+      const experimentItems = await client.folders.getFolderItems(experimentsFolderId!, {
         limit,
         offset,
       });
@@ -411,7 +403,7 @@ export async function listExperiments(
     
       return {
         items: experiments,
-        totalCount: experimentItems.total_count,
+        totalCount: experimentItems.totalCount || experimentItems.entries.length,
         limit,
         offset,
       };
@@ -421,32 +413,25 @@ export async function listExperiments(
 
   try {
     // Optimistic Metadata Query
-    let results;
-    if (client.metadata && typeof client.metadata.query === 'function') {
-       results = await client.metadata.query(
-         "enterprise.experimentMetadata", 
-         experimentsFolderId,
-         {
-           query: "experimentId IS NOT NULL", // Basic filter
-           fields: [
-             "name", "created_at",
-             "metadata.enterprise.experimentMetadata.experimentId",
-             "metadata.enterprise.experimentMetadata.experimentTitle",
-             "metadata.enterprise.experimentMetadata.objective",
-             "metadata.enterprise.experimentMetadata.hypothesis",
-             "metadata.enterprise.experimentMetadata.ownerName",
-             "metadata.enterprise.experimentMetadata.ownerEmail",
-             "metadata.enterprise.experimentMetadata.startedAt",
-             "metadata.enterprise.experimentMetadata.completedAt",
-             "metadata.enterprise.experimentMetadata.status",
-             "metadata.enterprise.experimentMetadata.tags"
-           ],
-           limit
-         }
-       );
-    } else {
-       throw new Error("Metadata Query API not available");
-    }
+    const results = await client.search.searchByMetadataQuery({
+      from: "enterprise.experimentMetadata",
+      ancestorFolderId: experimentsFolderId,
+      query: "experimentId IS NOT NULL", // Basic filter
+      fields: [
+        "name", "created_at",
+        "metadata.enterprise.experimentMetadata.experimentId",
+        "metadata.enterprise.experimentMetadata.experimentTitle",
+        "metadata.enterprise.experimentMetadata.objective",
+        "metadata.enterprise.experimentMetadata.hypothesis",
+        "metadata.enterprise.experimentMetadata.ownerName",
+        "metadata.enterprise.experimentMetadata.ownerEmail",
+        "metadata.enterprise.experimentMetadata.startedAt",
+        "metadata.enterprise.experimentMetadata.completedAt",
+        "metadata.enterprise.experimentMetadata.status",
+        "metadata.enterprise.experimentMetadata.tags"
+      ],
+      limit
+    });
 
     const experiments = results.entries.map((item: any) => {
       const md = item.metadata?.enterprise?.experimentMetadata || {};
@@ -516,7 +501,7 @@ export async function updateExperiment(
 
   if (operations.length > 0) {
     try {
-      await client.metadata.updateMetadataOnFolder(
+      await client.folderMetadata.updateFolderMetadataById(
         folderId,
         'enterprise',
         'experimentMetadata',

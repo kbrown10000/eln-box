@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireApiAuth } from '@/lib/auth/session';
 import { getBoxClient } from '@/lib/box/client';
+import { Readable } from 'stream';
 
 export async function POST(
   request: NextRequest,
@@ -21,12 +22,19 @@ export async function POST(
 
     const boxClient = getBoxClient();
 
-    // Convert File to Buffer
+    // Convert File to Buffer then Stream
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+    const stream = Readable.from(buffer);
 
     // Upload to Box
-    const uploadedFile = await boxClient.files.uploadFile(folderId, file.name, buffer);
+    const uploadedFile = await boxClient.uploads.uploadFile({
+      attributes: {
+        name: file.name,
+        parent: { id: folderId }
+      },
+      file: stream
+    });
 
     const fileEntry = uploadedFile.entries[0];
 

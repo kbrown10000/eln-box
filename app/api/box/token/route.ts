@@ -57,11 +57,15 @@ export async function GET(request: NextRequest) {
         scopes.push('item_preview');
       }
       
-      const downscopedToken = await client.exchangeToken(scopes, resource);
+      // The new SDK uses auth.downscopeToken instead of exchangeToken
+      const downscopedToken = await client.auth.downscopeToken(
+        scopes, 
+        resource, 
+        null // sharedLink
+      );
 
     // Normalize token response to camelCase for frontend consistency
-    // Box SDK/API returns 'access_token', Mock might return 'accessToken'
-    const token = downscopedToken.access_token || downscopedToken.accessToken;
+    const token = downscopedToken.accessToken;
 
     return NextResponse.json({ accessToken: token });
   } catch (err: any) {

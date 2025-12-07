@@ -13,7 +13,7 @@ import { relations } from 'drizzle-orm';
 
 // Enums
 export const userRoleEnum = pgEnum('user_role', ['admin', 'pi', 'researcher', 'viewer']);
-export const experimentStatusEnum = pgEnum('experiment_status', ['draft', 'in-progress', 'completed', 'locked']);
+export const experimentStatusEnum = pgEnum('experiment_status', ['draft', 'in-progress', 'review', 'rejected', 'completed', 'locked']);
 export const spectrumTypeEnum = pgEnum('spectrum_type', ['IR', 'NMR', 'MS', 'UV-Vis', 'other']);
 
 // Users table
@@ -124,6 +124,26 @@ export const auditLog = pgTable('audit_log', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+// Protocol snapshots table
+export const protocolSnapshots = pgTable('protocol_snapshots', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  experimentId: uuid('experiment_id').references(() => experiments.id, { onDelete: 'cascade' }).notNull(),
+  versionNumber: integer('version_number').notNull(),
+  snapshotData: jsonb('snapshot_data').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// Notifications table
+export const notifications = pgTable('notifications', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  title: varchar('title', { length: 255 }).notNull(),
+  message: text('message').notNull(),
+  link: varchar('link', { length: 500 }), // Action link (e.g. /experiments/123)
+  read: integer('read').default(0).notNull(), // 0 = unread, 1 = read
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 // Files cache table (optional - caches Box file metadata)
 export const filesCache = pgTable('files_cache', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -200,6 +220,27 @@ export const filesCacheRelations = relations(filesCache, ({ one }) => ({
   experiment: one(experiments, {
     fields: [filesCache.experimentId],
     references: [experiments.id],
+  }),
+}));
+
+export const auditLogRelations = relations(auditLog, ({ one }) => ({
+  user: one(users, {
+    fields: [auditLog.userId],
+    references: [users.id],
+  }),
+}));
+
+export const protocolSnapshotsRelations = relations(protocolSnapshots, ({ one }) => ({
+  experiment: one(experiments, {
+    fields: [protocolSnapshots.experimentId],
+    references: [experiments.id],
+  }),
+}));
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
+    references: [users.id],
   }),
 }));
 

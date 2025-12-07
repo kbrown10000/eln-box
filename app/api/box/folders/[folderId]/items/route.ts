@@ -13,13 +13,13 @@ export async function GET(
 
   try {
     const boxClient = getBoxClient();
-    const folder = await boxClient.folders.getItems(folderId, {
-      fields: 'id,name,type,size,modified_at,created_at',
+    const folder = await boxClient.folders.getFolderItems(folderId, {
+      fields: ['id', 'name', 'type', 'size', 'modified_at', 'created_at'],
     });
 
     return NextResponse.json({
       entries: folder.entries || [],
-      totalCount: folder.total_count || 0,
+      totalCount: folder.totalCount || 0,
     });
   } catch (err: any) {
     console.error('Error fetching folder items:', err);

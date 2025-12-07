@@ -7,9 +7,10 @@ import { useBoxSDK } from './BoxClientProvider';
 interface BoxHubProps {
   folderId: string;
   folderName?: string;
+  onFileSelect?: (fileId: string, fileName: string) => void;
 }
 
-export default function BoxHub({ folderId, folderName }: BoxHubProps) {
+export default function BoxHub({ folderId, folderName, onFileSelect }: BoxHubProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { sdkLoaded, error: sdkError } = useBoxSDK();
@@ -33,7 +34,7 @@ export default function BoxHub({ folderId, folderName }: BoxHubProps) {
       try {
         // Get downscoped token for this folder
         const tokenResponse = await fetch(
-          `/api/box/token?folderId=${folderId}&scopes=item_preview,item_download,item_upload,base_explorer,item_delete`
+          `/api/box/token?folderId=${folderId}&scopes=item_preview,item_download,item_upload,base_explorer,item_delete,item_info`
         );
         if (!tokenResponse.ok) {
           const err = await tokenResponse.json();
@@ -64,6 +65,15 @@ export default function BoxHub({ folderId, folderName }: BoxHubProps) {
           defaultView: 'files',
           sortBy: 'name',
           sortDirection: 'ASC',
+          // Enable selection if onFileSelect is provided
+          canSelect: !!onFileSelect,
+          selectionType: 'file', // Only allow file selection
+          selection: 'single', // Only single selection for simplicity in ingest
+          onSelect: (items: any) => {
+            if (onFileSelect && items && items.length > 0 && items[0].type === 'file') {
+              onFileSelect(items[0].id, items[0].name);
+            }
+          },
           contentPreviewProps: {
             contentSidebarProps: {
               detailsSidebarProps: {
@@ -97,7 +107,7 @@ export default function BoxHub({ folderId, folderName }: BoxHubProps) {
         explorerRef.current = null;
       }
     };
-  }, [sdkLoaded, folderId]);
+  }, [sdkLoaded, folderId, onFileSelect]);
 
   return (
     <div className="bg-white rounded-lg border overflow-hidden">

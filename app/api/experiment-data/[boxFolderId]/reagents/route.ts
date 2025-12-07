@@ -3,6 +3,8 @@ import { requireApiAuth } from '@/lib/auth/session';
 import { db } from '@/lib/db';
 import { experiments, reagents } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { ensureExperimentNotLocked, ExperimentLockedError } from '@/lib/experiments/checks';
+import { logActivity } from '@/lib/actions/audit';
 
 // POST - Add a new reagent
 export async function POST(
@@ -14,6 +16,15 @@ export async function POST(
 
   const { boxFolderId } = await params;
   const body = await request.json();
+
+  try {
+    await ensureExperimentNotLocked(boxFolderId);
+  } catch (err) {
+    if (err instanceof ExperimentLockedError) {
+      return NextResponse.json({ error: err.message }, { status: 403 });
+    }
+    throw err;
+  }
 
   try {
     const experiment = await db.query.experiments.findFirst({
@@ -37,6 +48,11 @@ export async function POST(
       })
       .returning();
 
+    await logActivity('add_reagent', 'experiment', boxFolderId, {
+      reagentId: newReagent.id,
+      name: newReagent.name
+    });
+
     return NextResponse.json(newReagent);
   } catch (err) {
     console.error('Error adding reagent:', err);
@@ -52,7 +68,17 @@ export async function PUT(
   const { error } = await requireApiAuth();
   if (error) return error;
 
+  const { boxFolderId } = await params;
   const body = await request.json();
+
+  try {
+    await ensureExperimentNotLocked(boxFolderId);
+  } catch (err) {
+    if (err instanceof ExperimentLockedError) {
+      return NextResponse.json({ error: err.message }, { status: 403 });
+    }
+    throw err;
+  }
 
   try {
     const [updatedReagent] = await db
@@ -69,6 +95,10 @@ export async function PUT(
       .where(eq(reagents.id, body.id))
       .returning();
 
+    await logActivity('update_reagent', 'experiment', boxFolderId, {
+      reagentId: updatedReagent.id
+    });
+
     return NextResponse.json(updatedReagent);
   } catch (err) {
     console.error('Error updating reagent:', err);
@@ -84,6 +114,7 @@ export async function DELETE(
   const { error } = await requireApiAuth();
   if (error) return error;
 
+  const { boxFolderId } = await params;
   const { searchParams } = new URL(request.url);
   const reagentId = searchParams.get('id');
 
@@ -92,7 +123,21 @@ export async function DELETE(
   }
 
   try {
+    await ensureExperimentNotLocked(boxFolderId);
+  } catch (err) {
+    if (err instanceof ExperimentLockedError) {
+      return NextResponse.json({ error: err.message }, { status: 403 });
+    }
+    throw err;
+  }
+
+  try {
     await db.delete(reagents).where(eq(reagents.id, reagentId));
+
+    await logActivity('delete_reagent', 'experiment', boxFolderId, {
+      reagentId: reagentId
+    });
+
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error('Error deleting reagent:', err);

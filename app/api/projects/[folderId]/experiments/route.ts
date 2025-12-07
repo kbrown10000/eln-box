@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { listExperiments, createExperiment } from '@/lib/box/folders';
 import { requireApiAuth } from '@/lib/auth/session';
 import { getBoxClient } from '@/lib/box/client';
+import { logActivity } from '@/lib/actions/audit';
 
 // GET /api/projects/:folderId/experiments - List experiments in a project
 // Query params: ?limit=50&offset=0
@@ -63,6 +64,18 @@ export async function POST(
       status: body.status || 'draft',
       tags: body.tags || [],
     });
+
+    // Log activity
+    await logActivity(
+      'create_experiment',
+      'experiment',
+      experiment.folderId,
+      {
+        projectFolderId: folderId,
+        title: experiment.experimentTitle,
+        experimentId: experiment.experimentId
+      }
+    );
 
     return NextResponse.json(experiment, { status: 201 });
   } catch (error) {

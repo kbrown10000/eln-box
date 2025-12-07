@@ -86,6 +86,16 @@ export default function UserMenu() {
               Dashboard
             </Link>
 
+            {session.user.role === 'admin' && (
+              <Link
+                href="/admin/users"
+                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                onClick={() => setIsOpen(false)}
+              >
+                User Management
+              </Link>
+            )}
+
             {/* Sign Out */}
             <div className="border-t border-gray-100">
               <button

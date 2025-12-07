@@ -8,31 +8,28 @@
  */
 import { config } from 'dotenv';
 import { resolve } from 'path';
+import { Readable } from 'stream';
 
 config({ path: resolve(process.cwd(), '.env.local') });
 
-import BoxSDK from 'box-node-sdk';
+import { BoxClient, BoxJwtAuth, JwtConfig } from 'box-typescript-sdk-gen';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { eq, sql } from 'drizzle-orm';
 import postgres from 'postgres';
 import * as schema from '../lib/db/schema';
 
 // Box setup
-const boxConfig = {
-  boxAppSettings: {
-    clientID: process.env.BOX_CLIENT_ID!,
-    clientSecret: process.env.BOX_CLIENT_SECRET!,
-    appAuth: {
-      publicKeyID: process.env.BOX_PUBLIC_KEY_ID!,
-      privateKey: process.env.BOX_PRIVATE_KEY!.replace(/\\n/g, '\n'),
-      passphrase: process.env.BOX_PASSPHRASE!,
-    },
-  },
-  enterpriseID: process.env.BOX_ENTERPRISE_ID!,
-};
+const jwtConfig = new JwtConfig({
+  clientId: process.env.BOX_CLIENT_ID!,
+  clientSecret: process.env.BOX_CLIENT_SECRET!,
+  jwtKeyId: process.env.BOX_PUBLIC_KEY_ID!,
+  privateKey: process.env.BOX_PRIVATE_KEY!.replace(/\\n/g, '\n'),
+  privateKeyPassphrase: process.env.BOX_PASSPHRASE!,
+  enterpriseId: process.env.BOX_ENTERPRISE_ID!,
+});
 
-const sdk = BoxSDK.getPreconfiguredInstance(boxConfig);
-const boxClient = sdk.getAppAuthClient('enterprise', boxConfig.enterpriseID);
+const auth = new BoxJwtAuth({ config: jwtConfig });
+const boxClient = new BoxClient({ auth });
 
 // Database setup
 const queryClient = postgres(process.env.POSTGRES_URL!);
@@ -212,8 +209,8 @@ async function main() {
 
     try {
       // Check if folder already exists
-      const existingItems = await boxClient.folders.getItems(experimentsFolderId, {
-        fields: 'id,name'
+      const existingItems = await boxClient.folders.getFolderItems(experimentsFolderId, {
+        fields: ['id', 'name']
       });
 
       let boxFolderId: string;
@@ -226,7 +223,10 @@ async function main() {
         console.log(`  ✓ Using existing folder: ${existingFolder.name} (${boxFolderId})`);
       } else {
         // Create new folder
-        const newFolder = await boxClient.folders.create(experimentsFolderId, folderName);
+        const newFolder = await boxClient.folders.createFolder({
+          parent: { id: experimentsFolderId },
+          name: folderName
+        });
         boxFolderId = newFolder.id;
         console.log(`  ✓ Created folder: ${folderName} (${boxFolderId})`);
       }
@@ -245,8 +245,8 @@ async function main() {
         for (const file of files) {
           try {
             // Check if file already exists
-            const folderContents = await boxClient.folders.getItems(boxFolderId, {
-              fields: 'id,name'
+            const folderContents = await boxClient.folders.getFolderItems(boxFolderId, {
+              fields: ['id', 'name']
             });
 
             const existingFile = folderContents.entries?.find((e: any) => e.name === file.name);
@@ -256,8 +256,16 @@ async function main() {
             } else {
               // Upload file
               const buffer = Buffer.from(file.content);
-              const uploadedFile = await boxClient.files.uploadFile(boxFolderId, file.name, buffer);
-              console.log(`  ✓ Uploaded: ${file.name} (${uploadedFile.entries[0].id})`);
+              const stream = Readable.from(buffer);
+              
+              const uploadedFile = await boxClient.uploads.uploadFile({
+                attributes: {
+                  name: file.name,
+                  parent: { id: boxFolderId }
+                },
+                file: stream
+              });
+              console.log(`  ✓ Uploaded: ${file.name} (${uploadedFile.entries![0].id})`);
             }
           } catch (uploadErr: any) {
             console.log(`  ⚠ Could not upload ${file.name}: ${uploadErr.message}`);
@@ -274,14 +282,14 @@ async function main() {
   console.log('\nNew folder structure:');
 
   // List the new structure
-  const items = await boxClient.folders.getItems(experimentsFolderId, {
-    fields: 'id,name,type'
+  const items = await boxClient.folders.getFolderItems(experimentsFolderId, {
+    fields: ['id', 'name', 'type']
   });
 
   for (const item of items.entries || []) {
     console.log(`  📁 ${item.name} (${item.id})`);
     if (item.type === 'folder') {
-      const subItems = await boxClient.folders.getItems(item.id, { fields: 'id,name,type' });
+      const subItems = await boxClient.folders.getFolderItems(item.id, { fields: ['id', 'name', 'type'] });
       for (const sub of subItems.entries || []) {
         console.log(`    📄 ${sub.name}`);
       }

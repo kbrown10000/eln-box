@@ -13,6 +13,7 @@ interface ProtocolSectionProps {
   onAddStep?: (instruction: string) => void;
   onUpdateStep?: (id: string, instruction: string) => void;
   onDeleteStep?: (id: string) => void;
+  onSnapshot?: () => void;
   editable?: boolean;
 }
 
@@ -21,37 +22,30 @@ export default function ProtocolSection({
   onAddStep,
   onUpdateStep,
   onDeleteStep,
+  onSnapshot,
   editable = false,
 }: ProtocolSectionProps) {
   const [newStep, setNewStep] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
-
-  const handleAddStep = () => {
-    if (newStep.trim() && onAddStep) {
-      onAddStep(newStep.trim());
-      setNewStep('');
-    }
-  };
-
-  const startEditing = (step: ProtocolStep) => {
-    setEditingId(step.id);
-    setEditText(step.instruction);
-  };
-
-  const saveEdit = () => {
-    if (editingId && editText.trim() && onUpdateStep) {
-      onUpdateStep(editingId, editText.trim());
-    }
-    setEditingId(null);
-    setEditText('');
-  };
-
+// ... (rest of function)
   return (
     <div className="bg-white rounded-lg border p-6">
-      <h2 className="text-xl font-bold mb-4">Protocol</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold">Protocol</h2>
+        {editable && onSnapshot && (
+          <button
+            onClick={onSnapshot}
+            className="text-sm border border-gray-300 rounded px-3 py-1 hover:bg-gray-50"
+            title="Save a snapshot of current steps"
+          >
+            Create Version
+          </button>
+        )}
+      </div>
 
       {steps.length === 0 ? (
+// ... (rest of return)
         <p className="text-gray-500 italic">No protocol steps defined yet.</p>
       ) : (
         <ol className="list-decimal list-inside space-y-2">

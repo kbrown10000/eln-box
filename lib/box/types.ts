@@ -22,7 +22,7 @@ export interface Experiment {
   ownerEmail: string;
   startedAt?: string;
   completedAt?: string;
-  status: 'draft' | 'in-progress' | 'completed' | 'locked';
+  status: 'draft' | 'in-progress' | 'review' | 'rejected' | 'completed' | 'locked';
   tags: string[];
 }
 

@@ -154,8 +154,10 @@ export const authConfig: NextAuthConfig = {
     },
     async authorized({ auth, request }) {
       const isLoggedIn = !!auth?.user;
+      const isAdmin = auth?.user?.role === 'admin';
       const isOnLoginPage = request.nextUrl.pathname.startsWith('/login');
       const isOnApiAuth = request.nextUrl.pathname.startsWith('/api/auth');
+      const isOnAdminPage = request.nextUrl.pathname.startsWith('/admin');
       const isPublicPath = request.nextUrl.pathname === '/' ||
                           request.nextUrl.pathname.startsWith('/_next') ||
                           request.nextUrl.pathname === '/favicon.ico';
@@ -171,6 +173,11 @@ export const authConfig: NextAuthConfig = {
           return Response.redirect(new URL('/projects', request.nextUrl));
         }
         return true;
+      }
+
+      // Admin route protection
+      if (isOnAdminPage) {
+        return isLoggedIn && isAdmin;
       }
 
       // Require auth for all other paths

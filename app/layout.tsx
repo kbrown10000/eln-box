@@ -5,6 +5,7 @@ import AuthProvider from "./components/AuthProvider";
 import BoxClientProvider from "./components/box/BoxClientProvider";
 import UserMenu from "./components/UserMenu";
 import BeakerIcon from "./components/BeakerIcon"; // Import BeakerIcon
+import NotificationBell from "./components/NotificationBell";
 
 const roboto = Roboto({
   subsets: ["latin"],
@@ -74,6 +75,7 @@ export default function RootLayout({
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
+                  <NotificationBell />
                   <UserMenu />
                 </div>
               </div>

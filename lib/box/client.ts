@@ -1,8 +1,9 @@
-import BoxSDK from 'box-node-sdk';
+import { BoxClient, BoxJwtAuth, JwtConfig, BoxDeveloperTokenAuth } from 'box-typescript-sdk-gen';
 
-export type BoxClient = any;
+export { BoxClient };
 
 let cachedClient: BoxClient | null = null;
+let cachedAuth: BoxJwtAuth | null = null;
 
 /**
  * Validate all required Box environment variables are present
@@ -28,61 +29,52 @@ function validateBoxEnvVars(): void {
     );
   }
 
-      // Validate BOX_PROJECTS_FOLDER_ID is not '0' (Box root)
-    if (process.env.BOX_PROJECTS_FOLDER_ID === '0') {
-      throw new Error(
-        'BOX_PROJECTS_FOLDER_ID cannot be "0" (Box root folder). ' +
-        'Please create a dedicated /ELN-Root/Projects folder and set its ID.'
-      );
-    }
+  // Validate BOX_PROJECTS_FOLDER_ID is not '0' (Box root)
+  if (process.env.BOX_PROJECTS_FOLDER_ID === '0') {
+    throw new Error(
+      'BOX_PROJECTS_FOLDER_ID cannot be "0" (Box root folder). ' +
+      'Please create a dedicated /ELN-Root/Projects folder and set its ID.'
+    );
   }
-  
-  function formatPrivateKey(key: string): string {
-    // If key is not a string, return empty (will fail validation)
-    if (!key) return '';
-    
-    // If it already contains real newlines, it's likely correct
-    if (key.includes('\n')) {
-      return key;
-    }
-    
-    // Replace literal \n with real newlines
-    return key.replace(/\\n/g, '\n');
+}
+
+function formatPrivateKey(key: string): string {
+  if (!key) return '';
+  if (key.includes('\n')) {
+    return key;
   }
-  
-  /**
-   * Get or create the Box SDK client instance
-   * Uses JWT authentication with service account
-   */
-  export function getBoxClient() {
-    if (cachedClient) {
-      return cachedClient;
-    }
-  
-    try {
-      // Validate all required environment variables
-      validateBoxEnvVars();
-      
-      const privateKey = formatPrivateKey(process.env.BOX_PRIVATE_KEY!);
-  
-      const sdk = BoxSDK.getPreconfiguredInstance({
-        boxAppSettings: {
-          clientID: process.env.BOX_CLIENT_ID!,
-          clientSecret: process.env.BOX_CLIENT_SECRET!,
-          appAuth: {
-            publicKeyID: process.env.BOX_PUBLIC_KEY_ID!,
-            privateKey: privateKey,
-            passphrase: process.env.BOX_PASSPHRASE!,
-          },
-        },
-        enterpriseID: process.env.BOX_ENTERPRISE_ID!,
-      });
-  
-      // Service account client (acts as the app)
-      cachedClient = sdk.getAppAuthClient('enterprise');
-  
-      return cachedClient;
-    } catch (error) {    if (process.env.NODE_ENV !== 'production') {
+  return key.replace(/\\n/g, '\n');
+}
+
+/**
+ * Get or create the Box SDK client instance
+ * Uses JWT authentication with service account
+ */
+export function getBoxClient() {
+  if (cachedClient) {
+    return cachedClient;
+  }
+
+  try {
+    validateBoxEnvVars();
+    
+    const privateKey = formatPrivateKey(process.env.BOX_PRIVATE_KEY!);
+
+    const jwtConfig = new JwtConfig({
+      clientId: process.env.BOX_CLIENT_ID!,
+      clientSecret: process.env.BOX_CLIENT_SECRET!,
+      jwtKeyId: process.env.BOX_PUBLIC_KEY_ID!,
+      privateKey: privateKey,
+      privateKeyPassphrase: process.env.BOX_PASSPHRASE!,
+      enterpriseId: process.env.BOX_ENTERPRISE_ID!,
+    });
+
+    cachedAuth = new BoxJwtAuth({ config: jwtConfig });
+    cachedClient = new BoxClient({ auth: cachedAuth });
+
+    return cachedClient;
+  } catch (error) {
+    if (process.env.NODE_ENV !== 'production') {
       console.warn(
         '****************************************************************************************************\n' +
         '** WARNING: Box SDK initialization failed. This is likely because required Box environment        **\n' +
@@ -91,15 +83,14 @@ function validateBoxEnvVars(): void {
         '****************************************************************************************************'
       );
       // Return a mock client in development to allow the app to run
+      // We cast to any to avoid strict type checks on the mock
       cachedClient = {
-        exchangeToken: async () => ({
-          accessToken: 'mock_token',
-        }),
-        // Add other methods that are called in the app to prevent crashes
+        auth: {
+          retrieveToken: async () => ({ accessToken: 'mock_token' }),
+        },
       } as any;
       return cachedClient;
     } else {
-      // In production, always throw the error
       console.error('Failed to initialize Box SDK client:', error);
       throw new Error('Box SDK initialization failed. Check your environment variables.');
     }
@@ -110,20 +101,15 @@ function validateBoxEnvVars(): void {
  * Helper to get client for specific user (future: per-user permissions)
  */
 export function getBoxClientForUser(userId: string) {
-  const sdk = BoxSDK.getPreconfiguredInstance({
-    boxAppSettings: {
-      clientID: process.env.BOX_CLIENT_ID!,
-      clientSecret: process.env.BOX_CLIENT_SECRET!,
-      appAuth: {
-        publicKeyID: process.env.BOX_PUBLIC_KEY_ID!,
-        privateKey: process.env.BOX_PRIVATE_KEY!.replace(/\\n/g, '\n'),
-        passphrase: process.env.BOX_PASSPHRASE!,
-      },
-    },
-    enterpriseID: process.env.BOX_ENTERPRISE_ID!,
-  });
+  // Ensure we have the base auth initialized
+  getBoxClient();
 
-  return sdk.getAppAuthClient('user', userId);
+  if (!cachedAuth) {
+    throw new Error('Box Auth not initialized');
+  }
+
+  const userAuth = cachedAuth.withUserSubject(userId);
+  return new BoxClient({ auth: userAuth });
 }
 
 /**
@@ -135,18 +121,11 @@ export function getUserClient(accessToken: string): BoxClient {
     throw new Error('Missing Box access token for user');
   }
 
-  if (!process.env.BOX_OAUTH_CLIENT_ID || !process.env.BOX_OAUTH_CLIENT_SECRET) {
-    throw new Error('BOX_OAUTH_CLIENT_ID and BOX_OAUTH_CLIENT_SECRET are required for user Box clients');
-  }
-
-  const sdk = new BoxSDK({
-    clientID: process.env.BOX_OAUTH_CLIENT_ID!,
-    clientSecret: process.env.BOX_OAUTH_CLIENT_SECRET!,
-  });
-
-  return sdk.getBasicClient(accessToken);
+  const auth = new BoxDeveloperTokenAuth({ token: accessToken });
+  return new BoxClient({ auth });
 }
 
 // Export singleton for convenience (enterprise service account)
 export const boxClient = getBoxClient;
+
 

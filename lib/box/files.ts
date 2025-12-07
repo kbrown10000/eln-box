@@ -16,7 +16,7 @@ export async function createEntry(
   content: string
 ): Promise<Entry> {
   // Find Entries subfolder
-  const items = await client.folders.getItems(experimentFolderId);
+  const items = await client.folders.getFolderItems(experimentFolderId);
   const entriesFolder = items.entries.find((e: any) => e.name === 'Entries');
 
   if (!entriesFolder) {
@@ -28,11 +28,17 @@ export async function createEntry(
   const buffer = Buffer.from(content, 'utf-8');
   const stream = Readable.from(buffer);
 
-  const file = await client.files.uploadFile(entriesFolder.id, fileName, stream);
+  const file = await client.uploads.uploadFile({
+    attributes: {
+      name: fileName,
+      parent: { id: entriesFolder.id }
+    },
+    file: stream
+  });
 
   // Apply metadata
   try {
-    await client.files.setMetadata(file.entries[0].id, 'enterprise', 'entryMetadata', {
+    await client.fileMetadata.createFileMetadataById(file.entries[0].id, 'enterprise', 'entryMetadata', {
       entryId: entry.entryId,
       entryDate: entry.entryDate,
       authorName: entry.authorName,
@@ -61,31 +67,31 @@ export async function getEntry(client: BoxClient, fileId: string): Promise<Entry
 
   // Get metadata
   try {
-    metadata = await client.files.getMetadata(fileId, 'enterprise', 'entryMetadata');
+    metadata = await client.fileMetadata.getFileMetadataById(fileId, 'enterprise', 'entryMetadata');
   } catch (error) {
     console.warn('Failed to get entry metadata:', error);
   }
 
   // Get file content
-  const stream = await client.files.getReadStream(fileId);
+  const downloadStream = await client.downloads.downloadFile(fileId);
   const chunks: Buffer[] = [];
 
-  for await (const chunk of stream) {
+  for await (const chunk of downloadStream) {
     chunks.push(Buffer.from(chunk));
   }
 
   const content = Buffer.concat(chunks).toString('utf-8');
 
   // Get file info for fallback
-  const fileInfo = await client.files.get(fileId);
+  const fileInfo = await client.files.getFileById(fileId);
 
   return {
     fileId,
     entryId: metadata.entryId || fileInfo.id,
-    entryDate: metadata.entryDate || fileInfo.created_at,
+    entryDate: metadata.entryDate || fileInfo.createdAt || fileInfo.created_at, // Handle potential property name change
     authorName: metadata.authorName || '',
     authorEmail: metadata.authorEmail || '',
-    title: metadata.title || fileInfo.name.replace('.md', ''),
+    title: metadata.title || fileInfo.name!.replace('.md', ''),
     entryType: metadata.entryType || 'observation',
     status: metadata.status || 'draft',
     version: metadata.version || '1',
@@ -109,11 +115,14 @@ export async function updateEntry(
   // Upload new version
   const buffer = Buffer.from(content, 'utf-8');
   const stream = Readable.from(buffer);
-  await client.files.uploadNewFileVersion(fileId, stream);
+  await client.uploads.uploadFileVersion(fileId, {
+    attributes: { name: 'new_version' }, // Name is usually ignored for version updates but might be required structure
+    file: stream
+  });
 
   // Update metadata version
   try {
-    const currentMetadata = await client.files.getMetadata(fileId, 'enterprise', 'entryMetadata');
+    const currentMetadata: any = await client.fileMetadata.getFileMetadataById(fileId, 'enterprise', 'entryMetadata');
     const newVersion = String(Number(currentMetadata.version || 1) + 1);
 
     const operations: any[] = [
@@ -130,7 +139,7 @@ export async function updateEntry(
       operations.push({ op: 'replace', path: '/entryType', value: metadataUpdates.entryType });
     }
 
-    await client.files.updateMetadata(fileId, 'enterprise', 'entryMetadata', operations);
+    await client.fileMetadata.updateFileMetadataById(fileId, 'enterprise', 'entryMetadata', operations);
   } catch (error) {
     console.warn('Failed to update entry metadata:', error);
   }
@@ -150,7 +159,7 @@ export async function listEntries(
   const offset = options.offset || 0;
 
   // Find Entries subfolder
-  const items = await client.folders.getItems(experimentFolderId);
+  const items = await client.folders.getFolderItems(experimentFolderId);
   const entriesFolder = items.entries.find((e: any) => e.name === 'Entries');
 
   if (!entriesFolder) {
@@ -158,7 +167,7 @@ export async function listEntries(
   }
 
   // Get entry files with pagination
-  const entryItems = await client.folders.getItems(entriesFolder.id, {
+  const entryItems = await client.folders.getFolderItems(entriesFolder.id, {
     limit,
     offset,
   });
@@ -166,7 +175,7 @@ export async function listEntries(
   const entries: Entry[] = [];
 
   for (const item of entryItems.entries) {
-    if (item.type === 'file' && item.name.endsWith('.md')) {
+    if (item.type === 'file' && item.name!.endsWith('.md')) {
       try {
         const entry = await getEntry(client, item.id);
         entries.push(entry);
@@ -178,7 +187,7 @@ export async function listEntries(
 
   return {
     items: entries,
-    totalCount: entryItems.total_count,
+    totalCount: entryItems.totalCount || entryItems.entries.length,
     limit,
     offset,
   };
@@ -195,7 +204,7 @@ export async function signEntry(
 ): Promise<Entry> {
 
   try {
-    await client.files.updateMetadata(fileId, 'enterprise', 'entryMetadata', [
+    await client.fileMetadata.updateFileMetadataById(fileId, 'enterprise', 'entryMetadata', [
       { op: 'replace', path: '/status', value: 'signed' },
       { op: 'add', path: '/signedAt', value: new Date().toISOString() },
       { op: 'add', path: '/signedBy', value: signedBy },
@@ -213,5 +222,5 @@ export async function signEntry(
  * Delete an entry
  */
 export async function deleteEntry(client: BoxClient, fileId: string): Promise<void> {
-  await client.files.delete(fileId);
+  await client.files.deleteFileById(fileId);
 }

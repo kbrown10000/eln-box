@@ -15,7 +15,7 @@ export async function GET(
     const boxClient = getBoxClient();
 
     // Get download URL from Box
-    const downloadUrl = await boxClient.files.getDownloadURL(fileId);
+    const downloadUrl = await boxClient.downloads.getDownloadUrl(fileId);
 
     return NextResponse.json({ downloadUrl });
   } catch (err: any) {
