@@ -34,6 +34,10 @@ declare global {
             defaultView?: 'files' | 'recents';
             sortBy?: string;
             sortDirection?: 'ASC' | 'DESC';
+            canSelect?: boolean;
+            selectionType?: 'file' | 'folder' | 'any';
+            selection?: 'single' | 'multiple';
+            onSelect?: (items: Array<{ id: string; name: string; type: string }>) => void;
             contentPreviewProps?: {
               contentSidebarProps?: {
                 detailsSidebarProps?: {

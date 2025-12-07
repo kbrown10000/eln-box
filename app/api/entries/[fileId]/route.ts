@@ -14,6 +14,11 @@ export async function GET(
   try {
     const { fileId } = await params;
     const boxClient = getBoxClient();
+
+    if (!boxClient) {
+        throw new Error("Failed to initialize Box Client");
+    }
+
     const entry = await getEntry(boxClient, fileId);
     return NextResponse.json(entry);
   } catch (error) {
@@ -37,6 +42,10 @@ export async function PATCH(
     const { fileId } = await params;
     const body = await req.json();
     const boxClient = getBoxClient();
+
+    if (!boxClient) {
+        throw new Error("Failed to initialize Box Client");
+    }
 
     const entry = await updateEntry(
       boxClient,
@@ -70,6 +79,11 @@ export async function DELETE(
   try {
     const { fileId } = await params;
     const boxClient = getBoxClient();
+
+    if (!boxClient) {
+        throw new Error("Failed to initialize Box Client");
+    }
+
     await deleteEntry(boxClient, fileId);
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -15,20 +15,24 @@ import { getBoxClient } from './client';
 export async function lockBoxFolder(folderId: string) {
   const client = getBoxClient();
 
+  if (!client) {
+      throw new Error("Failed to initialize Box Client");
+  }
+
   try {
     // 1. Get all collaborations for the folder
-    const collaborations = await client.listCollaborations.listFolderCollaborations(folderId);
+    const collaborations = await client.listCollaborations.getFolderCollaborations(folderId);
 
     // 2. Iterate and update roles or remove collaborators
     // Strategy: Downgrade all 'editor' roles to 'viewer'
     
-    for (const collab of collaborations.entries) {
+    for (const collab of collaborations.entries || []) {
       if (collab.role === 'editor' || collab.role === 'co_owner') {
          // Skip if it's the Service Account (Enterprise Admin) - though usually handled by separate logic
          // For safety, let's just downgrade everyone found here to viewer.
          
          try {
-             await client.collaborations.updateCollaborationById(collab.id, {
+             await client.userCollaborations.updateCollaborationById(collab.id, {
                  role: 'viewer'
              });
              console.log(`Downgraded collaboration ${collab.id} to viewer`);

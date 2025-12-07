@@ -16,10 +16,7 @@ export async function generateProtocol(userPrompt: string, experimentFolderId: s
 
   try {
     const { object: protocol } = await generateObject({
-      model: google.generativeAI(process.env.GEMINI_MODEL_ID || 'gemini-1.5-pro', {
-        maxTokens: 1024,
-        temperature: 0.7, // A bit more creative for generation
-      }),
+      model: google(process.env.GEMINI_MODEL_ID || 'gemini-1.5-pro'),
       schema: z.object({
         title: z.string().optional(),
         objective: z.string().optional(),

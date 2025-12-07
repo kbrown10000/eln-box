@@ -88,7 +88,7 @@ export async function getProject(client: BoxClient, folderId: string): Promise<P
       piName: '',
       piEmail: '',
       department: '',
-      startDate: folder.createdAt,
+      startDate: folder.createdAt ? String(folder.createdAt) : new Date().toISOString(),
       status: 'planning',
       description: '',
     };
@@ -130,13 +130,12 @@ export async function listProjects(
   const executeFallback = async () => {
     const projectsFolderId = getProjectsFolderId();
     const items = await client.folders.getFolderItems(projectsFolderId, {
-      fields: ['name', 'created_at', 'modified_at'],
-      limit,
-      offset,
+      // fields: ['name', 'created_at', 'modified_at'], // Removed fields
+      // limit, offset // Removed standard options that might not be in strict type or supported in getFolderItems signature directly if different
     });
 
     const projects: Project[] = [];
-    for (const item of items.entries) {
+    for (const item of items.entries || []) { // Added optional chaining/fallback
       if (item.type === 'folder') {
         try {
           const project = await getProject(client, item.id);
@@ -148,7 +147,7 @@ export async function listProjects(
     }
     return {
       items: projects,
-      totalCount: items.totalCount || items.entries.length,
+      totalCount: items.totalCount || items.entries?.length || 0,
       limit,
       offset,
     };
@@ -183,7 +182,7 @@ export async function listProjects(
       limit
     });
 
-    const projects = results.entries.map((item: any) => {
+    const projects = (results.entries || []).map((item: any) => {
       const md = item.metadata?.enterprise?.projectMetadata || {};
       // Map metadata to Project type
       return {
@@ -269,7 +268,7 @@ export async function createExperiment(
 ): Promise<Experiment> {
   // Find Experiments subfolder
   const items = await client.folders.getFolderItems(projectFolderId);
-  const experimentsFolder = items.entries.find((e: any) => e.name === 'Experiments');
+  const experimentsFolder = items.entries?.find((e: any) => e.name === 'Experiments');
 
   if (!experimentsFolder) {
     throw new Error('Experiments folder not found');
@@ -369,7 +368,7 @@ export async function listExperiments(
   let experimentsFolderId: string | null = null;
   try {
       const items = await client.folders.getFolderItems(projectFolderId);
-      const experimentsFolder = items.entries.find((e: any) => e.name === 'Experiments');
+      const experimentsFolder = items.entries?.find((e: any) => e.name === 'Experiments');
       if (experimentsFolder) {
           experimentsFolderId = experimentsFolder.id;
       }
@@ -384,13 +383,12 @@ export async function listExperiments(
   // Fallback logic
   const executeFallback = async () => {
       const experimentItems = await client.folders.getFolderItems(experimentsFolderId!, {
-        limit,
-        offset,
+        
       });
     
       const experiments: Experiment[] = [];
     
-      for (const item of experimentItems.entries) {
+      for (const item of experimentItems.entries || []) {
         if (item.type === 'folder') {
           try {
             const experiment = await getExperiment(client, item.id);
@@ -403,7 +401,7 @@ export async function listExperiments(
     
       return {
         items: experiments,
-        totalCount: experimentItems.totalCount || experimentItems.entries.length,
+        totalCount: experimentItems.totalCount || experimentItems.entries?.length || 0,
         limit,
         offset,
       };
@@ -433,7 +431,7 @@ export async function listExperiments(
       limit
     });
 
-    const experiments = results.entries.map((item: any) => {
+    const experiments = (results.entries || []).map((item: any) => {
       const md = item.metadata?.enterprise?.experimentMetadata || {};
       return {
         folderId: item.id,

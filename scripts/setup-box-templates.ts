@@ -1,8 +1,10 @@
 /**
- * Box Metadata Template Setup Script
+ * Setup Box Metadata Templates
  *
- * This script creates the necessary Box metadata templates for the ELN system.
- * Run this once after setting up your Box Custom App.
+ * Creates the templates required for the ELN system:
+ * - projectMetadata
+ * - experimentMetadata
+ * - entryMetadata
  *
  * Usage:
  *   npx tsx scripts/setup-box-templates.ts
@@ -34,7 +36,9 @@ async function createMetadataTemplates() {
   // Template 1: Project Metadata
   console.log('📁 Creating projectMetadata template...');
   try {
-    await client.metadataTemplates.createMetadataTemplate('enterprise', 'projectMetadata', {
+    await client.metadataTemplates.createMetadataTemplate({
+      scope: 'enterprise',
+      templateKey: 'projectMetadata',
       displayName: 'Project Metadata',
       hidden: false,
       fields: [
@@ -100,7 +104,9 @@ async function createMetadataTemplates() {
   // Template 2: Experiment Metadata
   console.log('🧪 Creating experimentMetadata template...');
   try {
-    await client.metadataTemplates.createMetadataTemplate('enterprise', 'experimentMetadata', {
+    await client.metadataTemplates.createMetadataTemplate({
+      scope: 'enterprise',
+      templateKey: 'experimentMetadata',
       displayName: 'Experiment Metadata',
       hidden: false,
       fields: [
@@ -182,7 +188,9 @@ async function createMetadataTemplates() {
   // Template 3: Entry Metadata
   console.log('📝 Creating entryMetadata template...');
   try {
-    await client.metadataTemplates.createMetadataTemplate('enterprise', 'entryMetadata', {
+    await client.metadataTemplates.createMetadataTemplate({
+      scope: 'enterprise',
+      templateKey: 'entryMetadata',
       displayName: 'Entry Metadata',
       hidden: false,
       fields: [
@@ -266,15 +274,9 @@ async function createMetadataTemplates() {
     }
   }
 
-  console.log('✨ Box metadata template setup complete!');
-  console.log('\nNext steps:');
-  console.log('1. Verify templates in Box Admin Console → Content → Metadata');
-  console.log('2. Create your /ELN-Root/Projects folder structure in Box');
-  console.log('3. Update BOX_ROOT_FOLDER_ID and BOX_PROJECTS_FOLDER_ID in .env.local');
-  console.log('4. Run: npm run dev\n');
+  console.log('✨ Metadata template setup complete!');
 }
 
-// Run the setup
 createMetadataTemplates().catch((error) => {
   console.error('\n❌ Fatal error:', error);
   process.exit(1);

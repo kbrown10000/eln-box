@@ -25,25 +25,26 @@ async function addCollaborator() {
 
   const boxClient = getBoxClient();
 
+  if (!boxClient) {
+      throw new Error("Failed to initialize Box Client");
+  }
+
   // Helper to add collaboration
   async function addCollab(folderId: string, folderName: string) {
     try {
-      await boxClient.collaborations.createWithUserEmail(
-        BOX_USER_EMAIL!,
-        folderId,
-        'editor', // Role: editor, viewer, co-owner, etc.
-        {
-          notify: false, // Don't send email notification
-        }
-      );
+      await boxClient!.userCollaborations.createCollaboration({
+        item: { id: folderId, type: 'folder' },
+        accessibleBy: { type: 'user', login: BOX_USER_EMAIL! },
+        role: 'editor'
+      });
       console.log(`  ✓ Added to: ${folderName} (${folderId})`);
       return true;
     } catch (err: any) {
-      if (err.statusCode === 400 && err.message?.includes('already a collaborator')) {
+      if (err.code === 'user_already_collaborator' || err.message?.includes('user_already_collaborator') || (err.response?.body?.code === 'user_already_collaborator')) {
         console.log(`  ⚠ Already collaborator: ${folderName} (${folderId})`);
         return true;
       }
-      console.error(`  ✗ Failed: ${folderName} (${folderId}) - ${err.message}`);
+      console.error(`  ✗ Failed: ${folderName} (${folderId}) - ${err}`);
       return false;
     }
   }

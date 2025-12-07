@@ -10,29 +10,18 @@ import { resolve } from 'path';
 // Load from .env.local
 config({ path: resolve(process.cwd(), '.env.local') });
 
-import BoxSDK from 'box-node-sdk';
+import { getBoxClient } from '../lib/box/client';
 import * as fs from 'fs';
 import * as path from 'path';
+import { Readable } from 'stream';
 
 console.log('BOX_CLIENT_ID:', process.env.BOX_CLIENT_ID ? 'SET' : 'NOT SET');
 
-// Box JWT configuration
-const boxConfig = {
-  boxAppSettings: {
-    clientID: process.env.BOX_CLIENT_ID!,
-    clientSecret: process.env.BOX_CLIENT_SECRET!,
-    appAuth: {
-      publicKeyID: process.env.BOX_PUBLIC_KEY_ID!,
-      privateKey: process.env.BOX_PRIVATE_KEY!.replace(/\\n/g, '\n'),
-      passphrase: process.env.BOX_PASSPHRASE!,
-    },
-  },
-  enterpriseID: process.env.BOX_ENTERPRISE_ID!,
-};
+const client = getBoxClient();
 
-// Initialize Box SDK
-const sdk = BoxSDK.getPreconfiguredInstance(boxConfig);
-const client = sdk.getAppAuthClient('enterprise', boxConfig.enterpriseID);
+if (!client) {
+    throw new Error("Failed to initialize Box Client");
+}
 
 // Sample files content (we'll create simple text files that represent scientific documents)
 const sampleFiles = [
@@ -177,8 +166,8 @@ async function uploadSampleFiles() {
       for (const file of folder.files) {
         try {
           // Check if file already exists
-          const existingFiles = await client.folders.getItems(folder.folderId, {
-            fields: 'id,name',
+          const existingFiles = await client!.folders.getFolderItems(folder.folderId, {
+            // fields: ['id', 'name'],
           });
 
           const exists = existingFiles.entries?.some(
@@ -190,23 +179,26 @@ async function uploadSampleFiles() {
             continue;
           }
 
-          // Create a temporary file
-          const tempPath = path.join(process.cwd(), 'temp_' + file.name);
-          fs.writeFileSync(tempPath, file.content);
+          // Convert content to Stream
+          const buffer = Buffer.from(file.content);
+          const stream = Readable.from(buffer);
 
           // Upload to Box
-          const stream = fs.createReadStream(tempPath);
-          const uploadedFile = await client.files.uploadFile(folder.folderId, file.name, stream);
+          const uploadedFile = await client!.uploads.uploadFile({
+            attributes: {
+              name: file.name,
+              parent: { id: folder.folderId }
+            },
+            file: stream
+          });
 
-          console.log(`  ✓ Uploaded: ${file.name} (ID: ${uploadedFile.entries[0].id})`);
+          console.log(`  ✓ Uploaded: ${file.name} (ID: ${uploadedFile.entries![0].id})`);
 
-          // Clean up temp file
-          fs.unlinkSync(tempPath);
         } catch (err: any) {
-          if (err.statusCode === 409) {
+          if (err.code === 'item_name_in_use' || err.message?.includes('item_name_in_use') || (err.response?.body?.code === 'item_name_in_use')) {
             console.log(`  ⏭️  ${file.name} already exists`);
           } else {
-            console.error(`  ❌ Failed to upload ${file.name}:`, err.message);
+            console.error(`  ❌ Failed to upload ${file.name}:`, err);
           }
         }
       }

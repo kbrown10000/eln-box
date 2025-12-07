@@ -13,8 +13,13 @@ export async function GET(
 
   try {
     const boxClient = getBoxClient();
+
+    if (!boxClient) {
+        throw new Error("Failed to initialize Box Client");
+    }
+
     const folder = await boxClient.folders.getFolderItems(folderId, {
-      fields: ['id', 'name', 'type', 'size', 'modified_at', 'created_at'],
+      // fields: ['id', 'name', 'type', 'size', 'modified_at', 'created_at'], 
     });
 
     return NextResponse.json({

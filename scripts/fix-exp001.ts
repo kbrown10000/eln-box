@@ -6,29 +6,20 @@ import { resolve } from 'path';
 
 config({ path: resolve(process.cwd(), '.env.local') });
 
-import BoxSDK from 'box-node-sdk';
+import { getBoxClient } from '../lib/box/client';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
 import postgres from 'postgres';
 import * as schema from '../lib/db/schema';
+import { Readable } from 'stream';
 
-const boxConfig = {
-  boxAppSettings: {
-    clientID: process.env.BOX_CLIENT_ID!,
-    clientSecret: process.env.BOX_CLIENT_SECRET!,
-    appAuth: {
-      publicKeyID: process.env.BOX_PUBLIC_KEY_ID!,
-      privateKey: process.env.BOX_PRIVATE_KEY!.replace(/\\n/g, '\n'),
-      passphrase: process.env.BOX_PASSPHRASE!,
-    },
-  },
-  enterpriseID: process.env.BOX_ENTERPRISE_ID!,
-};
+const boxClient = getBoxClient();
 
-const sdk = BoxSDK.getPreconfiguredInstance(boxConfig);
-const boxClient = sdk.getAppAuthClient('enterprise', boxConfig.enterpriseID);
+if (!boxClient) {
+    throw new Error("Failed to initialize Box Client");
+}
 
-const queryClient = postgres(process.env.POSTGRES_URL!);
+const queryClient = postgres(process.env.POSTGRES_URL!); 
 const db = drizzle(queryClient, { schema });
 
 const experimentsFolderId = '354210193655';
@@ -109,20 +100,23 @@ async function main() {
 
   try {
     // Check if it already exists
-    const existingItems = await boxClient.folders.getItems(experimentsFolderId, {
-      fields: 'id,name'
+    const existingItems = await boxClient!.folders.getFolderItems(experimentsFolderId, {
+      // fields: ['id', 'name']
     });
 
     let boxFolderId: string;
     const existingFolder = existingItems.entries?.find((e: any) =>
-      e.name.startsWith('EXP-001')
+      e.name!.startsWith('EXP-001')
     );
 
     if (existingFolder) {
       boxFolderId = existingFolder.id;
       console.log(`✓ Using existing folder: ${existingFolder.name} (${boxFolderId})`);
     } else {
-      const newFolder = await boxClient.folders.create(experimentsFolderId, folderName);
+      const newFolder = await boxClient!.folders.createFolder({
+        parent: { id: experimentsFolderId },
+        name: folderName
+      });
       boxFolderId = newFolder.id;
       console.log(`✓ Created folder: ${folderName} (${boxFolderId})`);
     }
@@ -138,8 +132,8 @@ async function main() {
     // 3. Upload files
     for (const file of files) {
       try {
-        const folderContents = await boxClient.folders.getItems(boxFolderId, {
-          fields: 'id,name'
+        const folderContents = await boxClient!.folders.getFolderItems(boxFolderId, {
+          // fields: ['id', 'name']
         });
 
         const existingFile = folderContents.entries?.find((e: any) => e.name === file.name);
@@ -148,8 +142,16 @@ async function main() {
           console.log(`✓ File already exists: ${file.name}`);
         } else {
           const buffer = Buffer.from(file.content);
-          const uploadedFile = await boxClient.files.uploadFile(boxFolderId, file.name, buffer);
-          console.log(`✓ Uploaded: ${file.name} (${uploadedFile.entries[0].id})`);
+          const stream = Readable.from(buffer);
+          
+          const uploadedFile = await boxClient!.uploads.uploadFile({
+            attributes: {
+              name: file.name,
+              parent: { id: boxFolderId }
+            },
+            file: stream
+          });
+          console.log(`✓ Uploaded: ${file.name} (${uploadedFile.entries![0].id})`);
         }
       } catch (uploadErr: any) {
         console.log(`⚠ Could not upload ${file.name}: ${uploadErr.message}`);
@@ -158,8 +160,7 @@ async function main() {
 
     console.log('\n✓ EXP-001 fixed!');
   } catch (err: any) {
-    console.error('Error:', err.message);
-    console.error(err);
+    console.error('Error:', err);
   }
 
   await queryClient.end();

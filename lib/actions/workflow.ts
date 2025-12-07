@@ -74,6 +74,11 @@ export async function updateExperimentStatus(boxFolderId: string, newStatus: Exp
 
   // B. Update Box Metadata
   const client = getBoxClient();
+
+  if (!client) {
+      throw new Error("Failed to initialize Box Client");
+  }
+
   await updateExperiment(client, boxFolderId, { status: newStatus });
 
   // C. Special Action: Locking

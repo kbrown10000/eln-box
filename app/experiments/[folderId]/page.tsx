@@ -7,6 +7,9 @@ import ExperimentClient from './ExperimentClient';
 async function getExperiment(folderId: string): Promise<Experiment | null> {
   try {
     const client = await getAuthenticatedBoxClient();
+    if (!client) {
+        throw new Error("Failed to initialize Box Client");
+    }
     return await getExperimentFromBox(client, folderId);
   } catch (error) {
     console.error('Error fetching experiment:', error);

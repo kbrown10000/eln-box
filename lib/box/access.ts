@@ -12,9 +12,15 @@ export async function ensureProjectsRootAccess(userEmail: string) {
 
   const serviceClient = getBoxClient();
 
+  if (!serviceClient) {
+      throw new Error("Failed to initialize Box Client");
+  }
+
   try {
-    await serviceClient.collaborations.createWithUserEmail(userEmail, rootFolderId, 'editor', {
-      notify: false,
+    await serviceClient.userCollaborations.createCollaboration({
+      item: { id: rootFolderId, type: 'folder' },
+      accessibleBy: { type: 'user', login: userEmail },
+      role: 'editor'
     });
   } catch (err: any) {
     // If already a collaborator, ignore conflict errors

@@ -5,6 +5,9 @@ import { getAuthenticatedBoxClient } from '@/lib/auth/session';
 async function getProjects(): Promise<Project[]> {
   try {
     const client = await getAuthenticatedBoxClient();
+    if (!client) {
+        throw new Error("Failed to initialize Box Client");
+    }
     const result = await listProjects(client);
     return result.items;
   } catch (error) {

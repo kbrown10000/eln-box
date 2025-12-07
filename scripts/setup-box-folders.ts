@@ -35,7 +35,7 @@ async function createFolderIfNotExists(client: BoxClient, parentId: string, name
     if (error.code === 'item_name_in_use' || error.message?.includes('item_name_in_use') || (error.response?.body?.code === 'item_name_in_use')) {
        // Find the existing folder
        const items = await client.folders.getFolderItems(parentId);
-       const existing = items.entries.find((e: any) => e.name === name);
+       const existing = items.entries?.find((e: any) => e.name === name);
        if (existing) {
          console.log(`ℹ️  Folder /${name} already exists (ID: ${existing.id})`);
          return existing.id;

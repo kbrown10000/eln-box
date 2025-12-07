@@ -6,6 +6,9 @@ import ProjectTabs from './ProjectTabs';
 async function getProject(folderId: string): Promise<Project | null> {
   try {
     const client = await getAuthenticatedBoxClient();
+    if (!client) {
+        throw new Error("Failed to initialize Box Client");
+    }
     return await getProjectFromBox(client, folderId);
   } catch (error) {
     console.error('Error fetching project:', error);
@@ -16,6 +19,9 @@ async function getProject(folderId: string): Promise<Project | null> {
 async function getExperiments(folderId: string): Promise<Experiment[]> {
   try {
     const client = await getAuthenticatedBoxClient();
+    if (!client) {
+        throw new Error("Failed to initialize Box Client");
+    }
     const result = await listExperiments(client, folderId);
     return result.items;
   } catch (error) {

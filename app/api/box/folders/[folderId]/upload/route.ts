@@ -22,6 +22,10 @@ export async function POST(
 
     const boxClient = getBoxClient();
 
+    if (!boxClient) {
+        throw new Error("Failed to initialize Box Client");
+    }
+
     // Convert File to Buffer then Stream
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
@@ -36,7 +40,11 @@ export async function POST(
       file: stream
     });
 
-    const fileEntry = uploadedFile.entries[0];
+    const fileEntry = uploadedFile.entries?.[0];
+
+    if (!fileEntry) {
+        throw new Error("File upload failed - no entry returned");
+    }
 
     return NextResponse.json({
       id: fileEntry.id,

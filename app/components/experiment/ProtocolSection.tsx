@@ -28,7 +28,27 @@ export default function ProtocolSection({
   const [newStep, setNewStep] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
-// ... (rest of function)
+
+  const handleAddStep = () => {
+    if (newStep.trim() && onAddStep) {
+      onAddStep(newStep.trim());
+      setNewStep('');
+    }
+  };
+
+  const startEditing = (step: ProtocolStep) => {
+    setEditingId(step.id);
+    setEditText(step.instruction);
+  };
+
+  const saveEdit = () => {
+    if (editingId && editText.trim() && onUpdateStep) {
+      onUpdateStep(editingId, editText.trim());
+    }
+    setEditingId(null);
+    setEditText('');
+  };
+
   return (
     <div className="bg-white rounded-lg border p-6">
       <div className="flex justify-between items-center mb-4">
@@ -45,7 +65,6 @@ export default function ProtocolSection({
       </div>
 
       {steps.length === 0 ? (
-// ... (rest of return)
         <p className="text-gray-500 italic">No protocol steps defined yet.</p>
       ) : (
         <ol className="list-decimal list-inside space-y-2">

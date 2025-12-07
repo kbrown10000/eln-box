@@ -16,6 +16,11 @@ export async function GET(
   try {
     const { folderId } = await params;
     const boxClient = getBoxClient();
+
+    if (!boxClient) {
+        throw new Error("Failed to initialize Box Client");
+    }
+
     const { searchParams } = new URL(req.url);
     const limit = parseInt(searchParams.get('limit') || '50', 10);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
@@ -42,6 +47,11 @@ export async function POST(
   try {
     const { folderId } = await params;
     const boxClient = getBoxClient();
+
+    if (!boxClient) {
+        throw new Error("Failed to initialize Box Client");
+    }
+
     const body = await req.json();
 
     // Validate required fields

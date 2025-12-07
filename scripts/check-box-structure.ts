@@ -6,53 +6,43 @@ import { resolve } from 'path';
 
 config({ path: resolve(process.cwd(), '.env.local') });
 
-import BoxSDK from 'box-node-sdk';
+import { getBoxClient, BoxClient } from '../lib/box/client';
 
-const boxConfig = {
-  boxAppSettings: {
-    clientID: process.env.BOX_CLIENT_ID!,
-    clientSecret: process.env.BOX_CLIENT_SECRET!,
-    appAuth: {
-      publicKeyID: process.env.BOX_PUBLIC_KEY_ID!,
-      privateKey: process.env.BOX_PRIVATE_KEY!.replace(/\\n/g, '\n'),
-      passphrase: process.env.BOX_PASSPHRASE!,
-    },
-  },
-  enterpriseID: process.env.BOX_ENTERPRISE_ID!,
-};
-
-const sdk = BoxSDK.getPreconfiguredInstance(boxConfig);
-const client = sdk.getAppAuthClient('enterprise', boxConfig.enterpriseID);
-
-async function listFolderRecursive(folderId: string, depth = 0) {
+async function listFolderRecursive(client: BoxClient, folderId: string, depth = 0) {
   const indent = '  '.repeat(depth);
 
   try {
-    const folder = await client.folders.get(folderId, { fields: 'id,name' });
+    const folder = await client.folders.getFolderById(folderId);
     console.log(`${indent}📁 ${folder.name} (id: ${folderId})`);
 
-    const items = await client.folders.getItems(folderId, {
-      fields: 'id,name,type,size'
+    const items = await client.folders.getFolderItems(folderId, {
+      // fields: ['id', 'name', 'type', 'size']
     });
 
     for (const item of items.entries || []) {
       if (item.type === 'folder') {
-        await listFolderRecursive(item.id, depth + 1);
+        await listFolderRecursive(client, item.id, depth + 1);
       } else {
         console.log(`${indent}  📄 ${item.name} (id: ${item.id})`);
       }
     }
   } catch (err: any) {
-    console.log(`${indent}❌ Error accessing folder ${folderId}: ${err.message}`);
+    console.log(`${indent}❌ Error accessing folder ${folderId}: ${err}`);
   }
 }
 
 async function main() {
+  const client = getBoxClient();
+
+  if (!client) {
+      throw new Error("Failed to initialize Box Client");
+  }
+
   console.log('Box Folder Structure:\n');
 
   // Start from root folder
   const rootFolderId = process.env.BOX_ROOT_FOLDER_ID!;
-  await listFolderRecursive(rootFolderId);
+  await listFolderRecursive(client, rootFolderId);
 }
 
 main();

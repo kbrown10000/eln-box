@@ -6,6 +6,9 @@ import Link from 'next/link';
 async function getProject(folderId: string) {
   try {
     const client = await getAuthenticatedBoxClient();
+    if (!client) {
+        throw new Error("Failed to initialize Box Client");
+    }
     return await getProjectFromBox(client, folderId);
   } catch (error) {
     console.error('Error fetching project:', error);

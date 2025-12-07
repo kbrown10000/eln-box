@@ -64,27 +64,27 @@ This plan breaks down the `UPGRADE_STRATEGY.md` into actionable development phas
     - [x] User selects a file (PDF/Image) from Box Hub.
     - [x] **Agent:** Use Gemini 1.5 Pro to read file, extract structured data (yields, peaks), and suggest DB updates.
 
-- [ ] **Task 3.3: "Protocol Assistant"**
-    - [ ] Add a "Generate Protocol" button.
-    - [ ] User types "Synthesis of Aspirin", Agent generates step-by-step protocol.
+- [x] **Task 3.3: "Protocol Assistant"**
+    - [x] Add a "Generate Protocol" button.
+    - [x] User types "Synthesis of Aspirin", Agent generates step-by-step protocol.
 
 ## Phase 4: Integration & Scale (Weeks 7-8)
 *Goal: Real-time synchronization and enterprise connectivity.*
 
-- [ ] **Task 4.1: Box Webhooks**
-    - [ ] Set up a Vercel API route to receive Box Webhook events.
-    - [ ] Handle `FILE.UPLOADED`: Auto-link new files to the active experiment in Postgres.
+- [x] **Task 4.1: Box Webhooks**
+    - [x] Set up a Vercel API route to receive Box Webhook events.
+    - [x] Handle `FILE.UPLOADED`: Auto-link new files to the active experiment in Postgres.
 
-- [ ] **Task 4.2: Metadata Sync**
-    - [ ] Ensure that changing `Project Status` in the App updates the **Box Metadata Template** automatically.
+- [x] **Task 4.2: Metadata Sync**
+    - [x] Ensure that changing `Project Status` in the App updates the **Box Metadata Template** automatically.
 
-- [ ] **Task 4.3: Performance Optimization**
-    - [ ] Implement `unstable_cache` for expensive dashboard queries.
-    - [ ] Optimize Box API calls with batching.
+- [x] **Task 4.3: Performance Optimization**
+    - [x] Implement `unstable_cache` for expensive dashboard queries.
+    - [x] Optimize Box API calls with batching.
 
 ## Phase 5: Validation & Launch (Week 9)
 *Goal: Prove it works.*
 
-- [ ] **Task 5.1: Validation Documentation**
-    - [ ] Generate Traceability Matrix (Requirements -> Tests).
-    - [ ] Finalize "About" and "Help" documentation.
+- [x] **Task 5.1: Validation Documentation**
+    - [x] Generate Traceability Matrix (Requirements -> Tests).
+    - [x] Finalize "About" and "Help" documentation.

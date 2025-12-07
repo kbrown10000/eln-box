@@ -17,7 +17,7 @@ export async function createEntry(
 ): Promise<Entry> {
   // Find Entries subfolder
   const items = await client.folders.getFolderItems(experimentFolderId);
-  const entriesFolder = items.entries.find((e: any) => e.name === 'Entries');
+  const entriesFolder = items.entries?.find((e: any) => e.name === 'Entries');
 
   if (!entriesFolder) {
     throw new Error('Entries folder not found');
@@ -36,9 +36,14 @@ export async function createEntry(
     file: stream
   });
 
+  const uploadedFileId = file.entries?.[0]?.id;
+  if (!uploadedFileId) {
+      throw new Error("Failed to upload entry file - no ID returned");
+  }
+
   // Apply metadata
   try {
-    await client.fileMetadata.createFileMetadataById(file.entries[0].id, 'enterprise', 'entryMetadata', {
+    await client.fileMetadata.createFileMetadataById(uploadedFileId, 'enterprise', 'entryMetadata', {
       entryId: entry.entryId,
       entryDate: entry.entryDate,
       authorName: entry.authorName,
@@ -53,7 +58,7 @@ export async function createEntry(
   }
 
   return {
-    fileId: file.entries[0].id,
+    fileId: uploadedFileId,
     ...entry,
     content,
   };
@@ -74,6 +79,11 @@ export async function getEntry(client: BoxClient, fileId: string): Promise<Entry
 
   // Get file content
   const downloadStream = await client.downloads.downloadFile(fileId);
+  
+  if (!downloadStream) {
+      throw new Error(`Failed to download file content for ${fileId}`);
+  }
+
   const chunks: Buffer[] = [];
 
   for await (const chunk of downloadStream) {
@@ -88,7 +98,7 @@ export async function getEntry(client: BoxClient, fileId: string): Promise<Entry
   return {
     fileId,
     entryId: metadata.entryId || fileInfo.id,
-    entryDate: metadata.entryDate || fileInfo.createdAt || fileInfo.created_at, // Handle potential property name change
+    entryDate: metadata.entryDate || fileInfo.createdAt,
     authorName: metadata.authorName || '',
     authorEmail: metadata.authorEmail || '',
     title: metadata.title || fileInfo.name!.replace('.md', ''),
@@ -160,7 +170,7 @@ export async function listEntries(
 
   // Find Entries subfolder
   const items = await client.folders.getFolderItems(experimentFolderId);
-  const entriesFolder = items.entries.find((e: any) => e.name === 'Entries');
+  const entriesFolder = items.entries?.find((e: any) => e.name === 'Entries');
 
   if (!entriesFolder) {
     return { items: [], totalCount: 0, limit, offset };
@@ -168,13 +178,13 @@ export async function listEntries(
 
   // Get entry files with pagination
   const entryItems = await client.folders.getFolderItems(entriesFolder.id, {
-    limit,
-    offset,
+    // limit,
+    // offset,
   });
 
   const entries: Entry[] = [];
 
-  for (const item of entryItems.entries) {
+  for (const item of entryItems.entries || []) {
     if (item.type === 'file' && item.name!.endsWith('.md')) {
       try {
         const entry = await getEntry(client, item.id);
@@ -187,7 +197,7 @@ export async function listEntries(
 
   return {
     items: entries,
-    totalCount: entryItems.totalCount || entryItems.entries.length,
+    totalCount: entryItems.totalCount || entryItems.entries?.length || 0,
     limit,
     offset,
   };

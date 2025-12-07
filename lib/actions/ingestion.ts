@@ -18,6 +18,10 @@ export async function ingestInstrumentFile(boxFileId: string, experimentFolderId
 
   const client = getBoxClient();
 
+  if (!client) {
+      throw new Error("Failed to initialize Box Client");
+  }
+
   try {
     // 1. Download file stream from Box
     const fileInfo = await client.files.getFileById(boxFileId);
@@ -25,7 +29,11 @@ export async function ingestInstrumentFile(boxFileId: string, experimentFolderId
     // Ensure the file is not too large for Gemini Vision (e.g., 20MB limit)
     // For now, proceeding directly. If errors, will need size check.
 
-    const downloadStream = await client.files.downloadFile(boxFileId);
+    const downloadStream = await client.downloads.downloadFile(boxFileId);
+
+    if (!downloadStream) {
+        throw new Error(`Failed to download file content for ${boxFileId}`);
+    }
 
     // Convert stream to Buffer (Gemini Vision needs Buffer or Blob)
     const chunks: Buffer[] = [];
@@ -37,14 +45,13 @@ export async function ingestInstrumentFile(boxFileId: string, experimentFolderId
     // Determine MIME type for Gemini
     // Box SDK provides contentType, but it might be generic like 'application/octet-stream' for images without extension
     // Heuristically check extension if contentType is not specific enough
-    let mimeType = fileInfo.contentType || 'application/octet-stream';
+    let mimeType = 'application/octet-stream'; // Default, as contentType is not available on FileFull directly
     const fileName = fileInfo.name || '';
-    if (mimeType === 'application/octet-stream') {
-        if (fileName.endsWith('.pdf')) mimeType = 'application/pdf';
-        else if (fileName.match(/\.(jpg|jpeg)$/i)) mimeType = 'image/jpeg';
-        else if (fileName.endsWith('.png')) mimeType = 'image/png';
-        else if (fileName.endsWith('.gif')) mimeType = 'image/gif';
-    }
+    
+    if (fileName.endsWith('.pdf')) mimeType = 'application/pdf';
+    else if (fileName.match(/\.(jpg|jpeg)$/i)) mimeType = 'image/jpeg';
+    else if (fileName.endsWith('.png')) mimeType = 'image/png';
+    else if (fileName.endsWith('.gif')) mimeType = 'image/gif';
     
     // Gemini vision supports PDF, PNG, JPEG, WEBP, HEIC
     if (!['image/jpeg', 'image/png', 'application/pdf', 'image/gif'].includes(mimeType)) {
@@ -53,10 +60,7 @@ export async function ingestInstrumentFile(boxFileId: string, experimentFolderId
 
     // 2. Send to Gemini 1.5 Pro (multimodal)
     const { object: extractedData } = await generateObject({
-      model: google.generativeAI(process.env.GEMINI_MODEL_ID || 'gemini-1.5-pro', {
-        maxTokens: 4096, // Reasonable token limit for structured output
-        temperature: 0.1, // Keep it low for factual extraction
-      }),
+      model: google(process.env.GEMINI_MODEL_ID || 'gemini-1.5-pro'),
       schema: z.object({
         yields: z.array(z.object({
           productName: z.string().optional(),
@@ -80,7 +84,7 @@ export async function ingestInstrumentFile(boxFileId: string, experimentFolderId
         })).optional(),
         notes: z.string().optional(),
       }),
-      prompt: `You are an expert lab assistant. Analyze the provided instrument file (image or PDF).
+      system: `You are an expert lab assistant. Analyze the provided instrument file (image or PDF).
                Extract any quantifiable data for chemical experiments, specifically:
                - Chemical yields (product name, theoretical, actual, percentage, unit)
                - Spectroscopic data (type, title, caption, key peak data like '1H NMR' peaks, 'IR' wavenumbers)
@@ -93,10 +97,10 @@ export async function ingestInstrumentFile(boxFileId: string, experimentFolderId
                Example for peakData: {"1H NMR (CDC3)": "7.26 (s, 1H), 7.0-7.1 (m, 4H)", "IR (cm-1)": "3300, 1700, 1600"}.`,
       messages: [
         {
-          role: 'user',
+          role: 'user' as const,
           content: [
-            { type: 'text', text: `Analyze this instrument file named "${fileName}":` },
-            { type: 'image', mimeType: mimeType, image: fileBuffer },
+            { type: 'text' as const, text: `Analyze this instrument file named "${fileName}":` },
+            { type: 'image' as const, image: `data:${mimeType};base64,${fileBuffer.toString('base64')}` },
           ],
         },
       ],

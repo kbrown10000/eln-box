@@ -8,10 +8,10 @@ export default function AboutPage() {
       <section className="bg-primary text-white py-20">
         <div className="container mx-auto px-6 text-center">
           <h1 className="text-4xl md:text-5xl font-heading font-bold mb-6">
-            USDM: Redefining Content-Driven Applications
+            LabNoteX: Your GxP-Compliant ELN Powered by USDM & Box
           </h1>
           <p className="text-xl md:text-2xl max-w-3xl mx-auto opacity-90">
-            Delivering effective science, commercialization, and scale through Box-Centric applications tailored for Life Sciences.
+            Securely manage your entire experimental lifecycle, from protocol generation to data ingestion and digital signatures, all backed by Box and intelligent AI.
           </p>
         </div>
       </section>
@@ -27,7 +27,7 @@ export default function AboutPage() {
             />
           </div>
           <h2 className="text-3xl font-heading font-bold text-primary mb-8 text-center">
-            The "Hybrid Data" Architecture
+            The "Hybrid Data" Architecture: Box as the GxP Source of Truth
           </h2>
           <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-200">
             <p className="text-lg mb-6">
@@ -83,6 +83,18 @@ export default function AboutPage() {
                 <li className="flex items-start gap-3">
                   <span className="bg-green-100 text-green-800 p-1 rounded-full mt-1">✓</span>
                   <span className="text-gray-700"><strong>Structure meets Flexibility:</strong> Users get the structure they need (forms, tables) without losing the flexibility of files.</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="bg-green-100 text-green-800 p-1 rounded-full mt-1">✓</span>
+                  <span className="text-gray-700"><strong>AI-Powered Insights & Automation:</strong> Leverage Gemini for smart data extraction from instrument files and AI-assisted protocol generation.</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="bg-green-100 text-green-800 p-1 rounded-full mt-1">✓</span>
+                  <span className="text-gray-700"><strong>Integrated Digital Signatures:</strong> Streamline approvals and compliance with Box Sign integration.</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="bg-green-100 text-green-800 p-1 rounded-full mt-1">✓</span>
+                  <span className="text-gray-700"><strong>Robust Audit Trails:</strong> Comprehensive logging of all actions for full traceability and GxP compliance.</span>
                 </li>
               </ul>
             </div>

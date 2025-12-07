@@ -29,6 +29,9 @@ export async function GET(request: NextRequest) {
 
   try {
     const client = getBoxClient();
+    if (!client) {
+        throw new Error("Failed to initialize Box Client");
+    }
     const resourceType = fileId ? 'files' : 'folders';
       const resourceId = fileId || folderId;
       const resource = `https://api.box.com/2.0/${resourceType}/${resourceId}`;
@@ -61,7 +64,7 @@ export async function GET(request: NextRequest) {
       const downscopedToken = await client.auth.downscopeToken(
         scopes, 
         resource, 
-        null // sharedLink
+        undefined // sharedLink
       );
 
     // Normalize token response to camelCase for frontend consistency

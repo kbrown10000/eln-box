@@ -14,6 +14,11 @@ export async function GET(
   try {
     const { folderId } = await params;
     const boxClient = getBoxClient();
+
+    if (!boxClient) {
+        throw new Error("Failed to initialize Box Client");
+    }
+
     const project = await getProject(boxClient, folderId);
     return NextResponse.json(project);
   } catch (error) {
@@ -37,6 +42,11 @@ export async function PATCH(
     const { folderId } = await params;
     const body = await req.json();
     const boxClient = getBoxClient();
+
+    if (!boxClient) {
+        throw new Error("Failed to initialize Box Client");
+    }
+
     const project = await updateProject(boxClient, folderId, body);
     return NextResponse.json(project);
   } catch (error) {

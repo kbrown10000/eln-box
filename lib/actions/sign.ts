@@ -19,6 +19,10 @@ export async function createSignRequest(
 
   const client = getBoxClient();
 
+  if (!client) {
+      throw new Error("Failed to initialize Box Client");
+  }
+
   try {
     const signRequest = await client.signRequests.createSignRequest({
       sourceFiles: [{ id: fileId, type: 'file' }],

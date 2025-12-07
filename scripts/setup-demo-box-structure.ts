@@ -210,7 +210,7 @@ async function main() {
     try {
       // Check if folder already exists
       const existingItems = await boxClient.folders.getFolderItems(experimentsFolderId, {
-        fields: ['id', 'name']
+        // fields: ['id', 'name']
       });
 
       let boxFolderId: string;
@@ -246,7 +246,7 @@ async function main() {
           try {
             // Check if file already exists
             const folderContents = await boxClient.folders.getFolderItems(boxFolderId, {
-              fields: ['id', 'name']
+              // fields: ['id', 'name']
             });
 
             const existingFile = folderContents.entries?.find((e: any) => e.name === file.name);
@@ -283,13 +283,15 @@ async function main() {
 
   // List the new structure
   const items = await boxClient.folders.getFolderItems(experimentsFolderId, {
-    fields: ['id', 'name', 'type']
+    // fields: ['id', 'name', 'type']
   });
 
   for (const item of items.entries || []) {
     console.log(`  📁 ${item.name} (${item.id})`);
     if (item.type === 'folder') {
-      const subItems = await boxClient.folders.getFolderItems(item.id, { fields: ['id', 'name', 'type'] });
+      const subItems = await boxClient.folders.getFolderItems(item.id, { 
+        // fields: ['id', 'name', 'type'] 
+      });
       for (const sub of subItems.entries || []) {
         console.log(`    📄 ${sub.name}`);
       }
