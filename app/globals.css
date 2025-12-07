@@ -3,18 +3,18 @@
 @tailwind utilities;
 
 :root {
-  /* Synapse Brand Colors - Light Mode */
-  --color-primary: #0f172a; /* Deep Navy */
-  --color-secondary: #f8fafc; /* Slate 50 */
-  --color-accent: #06b6d4; /* Cyan 500 */
-  --color-accent-hover: #0891b2; /* Cyan 600 */
+  /* USDM / Synapse Brand Colors */
+  --color-primary: #002F6C; /* USDM Deep Navy */
+  --color-secondary: #F8F9FA; /* Light Gray/White */
+  --color-accent: #00C7B7; /* Bright Teal/Cyan for Tech Highlights */
+  --color-accent-hover: #00A396; 
   
   --font-sans: var(--font-roboto), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   --font-heading: var(--font-roboto-slab), ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
 }
 
 body {
-  color: var(--color-primary);
+  color: #333;
   background: var(--color-secondary);
 }
 
@@ -23,14 +23,12 @@ body {
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  background-image: linear-gradient(to right, #06b6d4, #3b82f6);
+  background-image: linear-gradient(to right, #00C7B7, #4F46E5); /* Teal to Indigo */
 }
 
-/* Futuristic Background Grid */
-.bg-grid-pattern {
-  background-size: 40px 40px;
-  background-image: linear-gradient(to right, rgba(15, 23, 42, 0.05) 1px, transparent 1px),
-                    linear-gradient(to bottom, rgba(15, 23, 42, 0.05) 1px, transparent 1px);
+/* Hero Image Overlay */
+.hero-overlay {
+  background: linear-gradient(to bottom, rgba(0, 47, 108, 0.85), rgba(0, 47, 108, 0.7));
 }
 
 @layer utilities {
