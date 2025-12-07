@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import '@/lib/box/types-global';
+import { useBoxSDK } from './BoxClientProvider';
 
 interface BoxHubProps {
   folderId: string;
@@ -11,40 +12,15 @@ interface BoxHubProps {
 export default function BoxHub({ folderId, folderName }: BoxHubProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sdkLoaded, setSdkLoaded] = useState(false);
+  const { sdkLoaded, error: sdkError } = useBoxSDK();
   const explorerRef = useRef<any>(null);
 
-  // Load Box UI Elements SDK
   useEffect(() => {
-    // Check if already loaded
-    if (window.Box?.ContentExplorer) {
-      setSdkLoaded(true);
-      return;
+    if (sdkError) {
+        setError(sdkError);
+        setIsLoading(false);
     }
-
-    // Load CSS
-    const cssLink = document.createElement('link');
-    cssLink.rel = 'stylesheet';
-    cssLink.href = 'https://cdn01.boxcdn.net/platform/elements/19.0.0/en-US/explorer.css';
-    document.head.appendChild(cssLink);
-
-    // Load JS
-    const script = document.createElement('script');
-    script.src = 'https://cdn01.boxcdn.net/platform/elements/19.0.0/en-US/explorer.js';
-    script.async = true;
-    script.onload = () => {
-      setSdkLoaded(true);
-    };
-    script.onerror = () => {
-      setError('Failed to load Box Explorer SDK');
-      setIsLoading(false);
-    };
-    document.body.appendChild(script);
-
-    return () => {
-      // Cleanup
-    };
-  }, []);
+  }, [sdkError]);
 
   // Initialize explorer when SDK is loaded
   useEffect(() => {
@@ -57,13 +33,13 @@ export default function BoxHub({ folderId, folderName }: BoxHubProps) {
       try {
         // Get downscoped token for this folder
         const tokenResponse = await fetch(
-          `/api/box/token?folderId=${folderId}&scopes=item_preview,item_download,item_upload,base_explorer`
+          `/api/box/token?folderId=${folderId}&scopes=item_preview,item_download,item_upload,base_explorer,item_delete`
         );
         if (!tokenResponse.ok) {
           const err = await tokenResponse.json();
           throw new Error(err.error || 'Failed to get access token');
         }
-        const { access_token: accessToken } = await tokenResponse.json();
+        const { accessToken } = await tokenResponse.json();
 
         // Clean up previous explorer instance
         if (explorerRef.current) {
@@ -76,17 +52,33 @@ export default function BoxHub({ folderId, folderName }: BoxHubProps) {
 
         explorer.show(folderId, accessToken, {
           container: '#box-explorer-container',
+          logoUrl: '', // Could add a custom logo here
           canDownload: true,
           canUpload: true,
           canPreview: true,
-          canDelete: false, // Prevent accidental deletion
-          canRename: false,
+          canDelete: true, // Enabled per user request for full experience
+          canRename: true,
           canCreateNewFolder: true,
-          canShare: false, // Sharing managed externally
+          canShare: false, // Still risky without proper user tokens
           canSetShareAccess: false,
           defaultView: 'files',
           sortBy: 'name',
           sortDirection: 'ASC',
+          contentPreviewProps: {
+            contentSidebarProps: {
+              detailsSidebarProps: {
+                hasProperties: true,
+                hasNotices: true,
+                hasAccessStats: true,
+                hasClassification: true,
+                hasRetentionPolicy: true,
+              },
+              hasActivityFeed: true,
+              hasMetadata: true,
+              hasSkills: true,
+              hasVersions: true,
+            }
+          }
         });
 
         setIsLoading(false);
@@ -125,7 +117,7 @@ export default function BoxHub({ folderId, folderName }: BoxHubProps) {
       {/* Content */}
       <div className="relative" style={{ minHeight: '500px' }}>
         {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
             <div className="flex flex-col items-center gap-3">
               <svg className="w-8 h-8 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -137,7 +129,7 @@ export default function BoxHub({ folderId, folderName }: BoxHubProps) {
         )}
 
         {error && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
             <div className="text-center px-6">
               <svg className="w-12 h-12 mx-auto mb-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -151,9 +143,11 @@ export default function BoxHub({ folderId, folderName }: BoxHubProps) {
         {/* Box Explorer Container */}
         <div
           id="box-explorer-container"
+          className="box-explorer-override" 
           style={{
             height: '600px',
-            display: isLoading || error ? 'none' : 'block',
+            // Keep it in DOM but hidden if loading/error to avoid flash
+            visibility: isLoading || error ? 'hidden' : 'visible', 
           }}
         />
       </div>

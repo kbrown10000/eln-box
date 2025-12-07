@@ -585,9 +585,35 @@ Get dashboard statistics.
 
 ## Box File Operations
 
+### GET /api/box/token
+
+Generates a downscoped access token for Box UI Elements (Content Explorer, Preview).
+
+**Query Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `folderId`| string | Yes* | Box Folder ID to scope access to (*or fileId) |
+| `fileId`  | string | Yes* | Box File ID to scope access to (*or folderId) |
+| `scopes`  | string | No | Comma-separated list of requested scopes (filtered by allowlist) |
+
+**Security:**
+- This endpoint strictly validates requested `scopes` against a server-side allowlist.
+- Invalid scopes are ignored.
+- Prevents privilege escalation attacks.
+
+**Response:**
+```json
+{
+  "accessToken": "downscoped_token_string",
+  "expires_in": 3600,
+  "token_type": "bearer"
+}
+```
+
 ### GET /api/box/folders/[folderId]/items
 
-List files in a Box folder.
+**[DEPRECATED]** List files in a Box folder.
+*Note: The UI now uses the native Box Content Explorer via `BoxHub`, which fetches data directly from Box.*
 
 **Response:**
 ```json

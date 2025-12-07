@@ -120,37 +120,105 @@ export async function listProjects(
   client: BoxClient,
   options: PaginationOptions = {}
 ): Promise<PaginatedResult<Project>> {
-  const projectsFolderId = getProjectsFolderId();
-
   const limit = Math.min(options.limit || DEFAULT_LIMIT, MAX_LIMIT);
   const offset = options.offset || 0;
 
-  // Get folders in the Projects folder with pagination
-  const items = await client.folders.getItems(projectsFolderId, {
-    fields: 'name,created_at,modified_at',
-    limit,
-    offset,
-  });
+  // Fallback logic using N+1 iteration (reliable but slow)
+  const executeFallback = async () => {
+    const projectsFolderId = getProjectsFolderId();
+    const items = await client.folders.getItems(projectsFolderId, {
+      fields: 'name,created_at,modified_at',
+      limit,
+      offset,
+    });
 
-  const projects: Project[] = [];
-
-  for (const item of items.entries) {
-    if (item.type === 'folder') {
-      try {
-        const project = await getProject(client, item.id);
-        projects.push(project);
-      } catch (error) {
-        console.error(`Failed to get project ${item.id}:`, error);
+    const projects: Project[] = [];
+    for (const item of items.entries) {
+      if (item.type === 'folder') {
+        try {
+          const project = await getProject(client, item.id);
+          projects.push(project);
+        } catch (error) {
+          console.error(`Failed to get project ${item.id}:`, error);
+        }
       }
     }
+    return {
+      items: projects,
+      totalCount: items.total_count,
+      limit,
+      offset,
+    };
+  };
+
+  // If using offset pagination, fallback (Metadata Query uses markers)
+  if (offset > 0) {
+    return executeFallback();
   }
 
-  return {
-    items: projects,
-    totalCount: items.total_count,
-    limit,
-    offset,
-  };
+  try {
+    const projectsFolderId = getProjectsFolderId();
+    
+    // Optimistic Metadata Query
+    // Note: This requires the template to be indexed.
+
+    // Attempt to use SDK method for metadata query
+    let results;
+    
+    // Check if method exists (it is 'query' in box-node-sdk)
+    if (client.metadata && typeof client.metadata.query === 'function') {
+       results = await client.metadata.query(
+         "enterprise.projectMetadata", 
+         projectsFolderId,
+         {
+           query: "projectCode IS NOT NULL",
+           fields: [
+             "name", "created_at", 
+             "metadata.enterprise.projectMetadata.projectCode",
+             "metadata.enterprise.projectMetadata.projectName",
+             "metadata.enterprise.projectMetadata.piName",
+             "metadata.enterprise.projectMetadata.piEmail",
+             "metadata.enterprise.projectMetadata.department",
+             "metadata.enterprise.projectMetadata.startDate",
+             "metadata.enterprise.projectMetadata.status",
+             "metadata.enterprise.projectMetadata.description"
+           ],
+           limit
+         }
+       );
+    } else {
+       console.warn('Metadata Query API (client.metadata.query) is missing. Available keys on client.metadata:', client.metadata ? Object.keys(client.metadata) : 'client.metadata is undefined');
+       throw new Error("Metadata Query API not available on client");
+    }
+
+    const projects = results.entries.map((item: any) => {
+      const md = item.metadata?.enterprise?.projectMetadata || {};
+      // Map metadata to Project type
+      return {
+        folderId: item.id,
+        projectCode: md.projectCode || 'UNKNOWN',
+        projectName: md.projectName || item.name,
+        piName: md.piName || '',
+        piEmail: md.piEmail || '',
+        department: md.department || '',
+        startDate: md.startDate || item.created_at,
+        status: md.status || 'planning',
+        description: md.description || ''
+      };
+    });
+
+    return {
+      items: projects,
+      totalCount: projects.length, // Approximate
+      limit,
+      offset
+    };
+
+  } catch (error) {
+    // Fallback on any error (API error, missing index, SDK mismatch)
+    console.warn("Metadata Query optimization failed, using fallback:", error);
+    return executeFallback();
+  }
 }
 
 /**
@@ -304,39 +372,110 @@ export async function listExperiments(
   const limit = Math.min(options.limit || DEFAULT_LIMIT, MAX_LIMIT);
   const offset = options.offset || 0;
 
-  // Find Experiments subfolder
-  const items = await client.folders.getItems(projectFolderId);
-  const experimentsFolder = items.entries.find((e: any) => e.name === 'Experiments');
+  // Find Experiments subfolder first (needed for both methods)
+  // We could optimize this too, but it's just one call.
+  let experimentsFolderId: string | null = null;
+  try {
+      const items = await client.folders.getItems(projectFolderId);
+      const experimentsFolder = items.entries.find((e: any) => e.name === 'Experiments');
+      if (experimentsFolder) {
+          experimentsFolderId = experimentsFolder.id;
+      }
+  } catch (e) {
+      console.warn('Failed to find Experiments folder:', e);
+  }
 
-  if (!experimentsFolder) {
+  if (!experimentsFolderId) {
     return { items: [], totalCount: 0, limit, offset };
   }
 
-  // Get experiment folders with pagination
-  const experimentItems = await client.folders.getItems(experimentsFolder.id, {
-    limit,
-    offset,
-  });
-
-  const experiments: Experiment[] = [];
-
-  for (const item of experimentItems.entries) {
-    if (item.type === 'folder') {
-      try {
-        const experiment = await getExperiment(client, item.id);
-        experiments.push(experiment);
-      } catch (error) {
-        console.error(`Failed to get experiment ${item.id}:`, error);
+  // Fallback logic
+  const executeFallback = async () => {
+      const experimentItems = await client.folders.getItems(experimentsFolderId!, {
+        limit,
+        offset,
+      });
+    
+      const experiments: Experiment[] = [];
+    
+      for (const item of experimentItems.entries) {
+        if (item.type === 'folder') {
+          try {
+            const experiment = await getExperiment(client, item.id);
+            experiments.push(experiment);
+          } catch (error) {
+            console.error(`Failed to get experiment ${item.id}:`, error);
+          }
+        }
       }
-    }
-  }
-
-  return {
-    items: experiments,
-    totalCount: experimentItems.total_count,
-    limit,
-    offset,
+    
+      return {
+        items: experiments,
+        totalCount: experimentItems.total_count,
+        limit,
+        offset,
+      };
   };
+
+  if (offset > 0) return executeFallback();
+
+  try {
+    // Optimistic Metadata Query
+    let results;
+    if (client.metadata && typeof client.metadata.query === 'function') {
+       results = await client.metadata.query(
+         "enterprise.experimentMetadata", 
+         experimentsFolderId,
+         {
+           query: "experimentId IS NOT NULL", // Basic filter
+           fields: [
+             "name", "created_at",
+             "metadata.enterprise.experimentMetadata.experimentId",
+             "metadata.enterprise.experimentMetadata.experimentTitle",
+             "metadata.enterprise.experimentMetadata.objective",
+             "metadata.enterprise.experimentMetadata.hypothesis",
+             "metadata.enterprise.experimentMetadata.ownerName",
+             "metadata.enterprise.experimentMetadata.ownerEmail",
+             "metadata.enterprise.experimentMetadata.startedAt",
+             "metadata.enterprise.experimentMetadata.completedAt",
+             "metadata.enterprise.experimentMetadata.status",
+             "metadata.enterprise.experimentMetadata.tags"
+           ],
+           limit
+         }
+       );
+    } else {
+       throw new Error("Metadata Query API not available");
+    }
+
+    const experiments = results.entries.map((item: any) => {
+      const md = item.metadata?.enterprise?.experimentMetadata || {};
+      return {
+        folderId: item.id,
+        experimentId: md.experimentId || 'UNKNOWN',
+        experimentTitle: md.experimentTitle || item.name,
+        objective: md.objective || '',
+        hypothesis: md.hypothesis || '',
+        ownerName: md.ownerName || '',
+        ownerEmail: md.ownerEmail || '',
+        startedAt: md.startedAt,
+        completedAt: md.completedAt,
+        status: md.status || 'draft',
+        tags: md.tags || [],
+      };
+    });
+
+    return {
+      items: experiments,
+      totalCount: experiments.length,
+      limit,
+      offset
+    };
+
+  } catch (error) {
+    console.warn("Metadata Query optimization failed for experiments, using fallback:", error);
+    return executeFallback();
+  }
 }
 
 /**

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import '@/lib/box/types-global';
+import { useBoxSDK } from './BoxClientProvider';
 
 interface BoxPreviewModalProps {
   fileId: string;
@@ -18,43 +19,16 @@ export default function BoxPreviewModal({
 }: BoxPreviewModalProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sdkLoaded, setSdkLoaded] = useState(false);
+  const { sdkLoaded, error: sdkError } = useBoxSDK();
   const previewRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Load Box Preview SDK
   useEffect(() => {
-    if (!isOpen) return;
-
-    // Check if already loaded
-    if (window.Box?.Preview) {
-      setSdkLoaded(true);
-      return;
-    }
-
-    // Load CSS
-    const cssLink = document.createElement('link');
-    cssLink.rel = 'stylesheet';
-    cssLink.href = 'https://cdn01.boxcdn.net/platform/preview/2.94.0/en-US/preview.css';
-    document.head.appendChild(cssLink);
-
-    // Load JS
-    const script = document.createElement('script');
-    script.src = 'https://cdn01.boxcdn.net/platform/preview/2.94.0/en-US/preview.js';
-    script.async = true;
-    script.onload = () => {
-      setSdkLoaded(true);
-    };
-    script.onerror = () => {
-      setError('Failed to load Box Preview SDK');
+    if (sdkError) {
+      setError(sdkError);
       setIsLoading(false);
-    };
-    document.body.appendChild(script);
-
-    return () => {
-      // Cleanup script and css if component unmounts before load
-    };
-  }, [isOpen]);
+    }
+  }, [sdkError]);
 
   // Initialize preview when SDK is loaded
   useEffect(() => {
@@ -71,7 +45,7 @@ export default function BoxPreviewModal({
           const err = await tokenResponse.json();
           throw new Error(err.error || 'Failed to get access token');
         }
-        const { accessToken } = await tokenResponse.json();
+        const { accessToken } = await tokenResponse.json(); // Fixed destructuring
 
         // Clean up previous preview instance
         if (previewRef.current) {

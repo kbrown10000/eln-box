@@ -66,7 +66,7 @@ export default function ExperimentClient({
   const [reagents, setReagents] = useState<Reagent[]>([]);
   const [yieldData, setYieldData] = useState<YieldData | null>(null);
   const [spectra, setSpectra] = useState<Spectrum[]>([]);
-  const [files, setFiles] = useState<BoxFile[]>([]);
+  // const [files, setFiles] = useState<BoxFile[]>([]); // Handled by BoxHub
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -129,7 +129,8 @@ export default function ExperimentClient({
     }
   }, [folderId]);
 
-  // Fetch Box files
+  // Fetch Box files - DEPRECATED: Handled by Box UI Element now
+  /*
   const fetchFiles = useCallback(async () => {
     try {
       const response = await fetch(`/api/box/folders/${folderId}/items`);
@@ -148,11 +149,12 @@ export default function ExperimentClient({
       console.error('Error fetching files:', err);
     }
   }, [folderId]);
+  */
 
   useEffect(() => {
     fetchData();
-    fetchFiles();
-  }, [fetchData, fetchFiles]);
+    // fetchFiles(); // Handled by BoxHub
+  }, [fetchData]);
 
   // Protocol step handlers
   const handleAddProtocolStep = async (instruction: string) => {
@@ -466,9 +468,6 @@ export default function ExperimentClient({
       <BoxFileBrowser
         folderId={folderId}
         folderPath={['LabNoteX_Projects', experiment.experimentTitle || 'Experiment']}
-        files={files}
-        onNavigate={(id) => console.log('Navigate to folder:', id)}
-        onFileUploaded={fetchFiles}
       />
     </div>
   );

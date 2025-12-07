@@ -70,9 +70,10 @@ LabNoteX provides researchers with a comprehensive platform for:
 - Link to Box files
 
 ### File Management
-- Browse experiment files from Box
-- Upload new files directly
-- View file metadata (size, type, modified date)
+- **Native Box Experience** - Full Box Content Explorer embedded directly in the app
+- **Project Hubs** - Centralized view of all project content
+- **Seamless Uploads** - Drag-and-drop file uploads
+- **Rich Previews** - Instant preview of scientific data and documents without downloading
 
 ### Analytics Dashboard
 - Overview metrics (projects, experiments, researchers)
@@ -91,7 +92,7 @@ LabNoteX provides researchers with a comprehensive platform for:
 | [NextAuth.js v5](https://authjs.dev) | Authentication |
 | [Drizzle ORM](https://orm.drizzle.team) | Database ORM |
 | [Neon Postgres](https://neon.tech) | Serverless database |
-| [Box SDK](https://developer.box.com) | File storage API |
+| [Box SDK & UI Elements](https://developer.box.com) | File storage & Native Widgets |
 | [Vercel](https://vercel.com) | Deployment platform |
 
 ## Quick Start
@@ -250,8 +251,3 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup and guidelines.
 ## License
 
 MIT License - see [LICENSE](./LICENSE) for details.
-
-## Acknowledgments
-
-- Built with [Claude Code](https://claude.ai)
-- Powered by Vercel + Box

@@ -34,6 +34,21 @@ declare global {
             defaultView?: 'files' | 'recents';
             sortBy?: string;
             sortDirection?: 'ASC' | 'DESC';
+            contentPreviewProps?: {
+              contentSidebarProps?: {
+                detailsSidebarProps?: {
+                  hasProperties?: boolean;
+                  hasNotices?: boolean;
+                  hasAccessStats?: boolean;
+                  hasClassification?: boolean;
+                  hasRetentionPolicy?: boolean;
+                };
+                hasActivityFeed?: boolean;
+                hasMetadata?: boolean;
+                hasSkills?: boolean;
+                hasVersions?: boolean;
+              };
+            };
           }
         ) => void;
         hide: () => void;

@@ -302,16 +302,24 @@ app/experiments/[folderId]/page.tsx (Server)
 └── ExperimentClient.tsx (Client)
     ├── ExperimentHeader.tsx
     ├── ProtocolEditor.tsx
-    │   └── ProtocolStep.tsx (per step)
     ├── ReagentsTable.tsx
-    │   └── ReagentRow.tsx (per reagent)
     ├── YieldCalculator.tsx
-    │   └── YieldRow.tsx (per yield)
     ├── SpectroscopySection.tsx
-    │   └── SpectrumCard.tsx (per spectrum)
     └── BoxFileBrowser.tsx
-        └── FileItem.tsx (per file)
+        └── BoxHub.tsx (Box Content Explorer)
 ```
+
+### Box UI Integration (The "Box Experience")
+
+To provide a native file management experience, LabNoteX integrates official Box UI Elements (Content Explorer, Preview, etc.) directly into the application.
+
+1.  **BoxClientProvider**: A global React Context provider (`app/components/box/BoxClientProvider.tsx`) loads the Box UI SDK scripts (CSS/JS) once at the application root. This prevents race conditions and ensures widgets load instantly on navigation.
+2.  **BoxHub**: A wrapper component (`app/components/box/BoxHub.tsx`) that initializes the **Box Content Explorer**.
+    *   **Project Hubs**: Display the full content of a Project folder.
+    *   **Experiment Files**: Display the content of an Experiment folder.
+    *   **Features**: Enables drag-and-drop uploads, file previews, search, and sidebar details natively.
+3.  **Token Exchange**: The frontend requests a "downscoped" access token from `/api/box/token` to authorize the widget.
+    *   **Security**: The token endpoint enforces a strict whitelist of scopes (e.g., `item_preview`, `base_explorer`) to prevent privilege escalation.
 
 ## Data Flow Examples
 

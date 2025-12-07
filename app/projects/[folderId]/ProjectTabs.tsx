@@ -49,7 +49,7 @@ export default function ProjectTabs({ project, experiments, folderId }: ProjectT
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
               <path d="M3 3h18v18H3V3zm16 16V5H5v14h14z" />
             </svg>
-            Box Hub
+            Project Hub
           </span>
         </button>
       </div>

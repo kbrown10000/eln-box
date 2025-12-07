@@ -133,3 +133,11 @@ Until this is fixed:
 - Box SDK User Authentication: https://developer.box.com/guides/authentication/oauth2/
 - Box Collaborations API: https://developer.box.com/reference/resources/collaboration/
 - NextAuth Token Refresh: https://authjs.dev/guides/refresh-token-rotation
+
+## Completed Security Fixes
+
+### [FIXED] Token Endpoint Privilege Escalation
+**Date:** 2025-12-05
+**Issue:** The `/api/box/token` endpoint previously accepted any scope requested by the client, potentially allowing a malicious user to request `root_readwrite` or other elevated privileges if the service account possessed them.
+**Fix:** Implemented a strict whitelist of allowed scopes (e.g., `item_preview`, `base_explorer`, `item_upload`). The endpoint now filters all requested scopes against this whitelist before generating the token.
+**File:** `app/api/box/token/route.ts`

@@ -28,48 +28,81 @@ function validateBoxEnvVars(): void {
     );
   }
 
-  // Validate BOX_PROJECTS_FOLDER_ID is not '0' (Box root)
-  if (process.env.BOX_PROJECTS_FOLDER_ID === '0') {
-    throw new Error(
-      'BOX_PROJECTS_FOLDER_ID cannot be "0" (Box root folder). ' +
-      'Please create a dedicated /ELN-Root/Projects folder and set its ID.'
-    );
+      // Validate BOX_PROJECTS_FOLDER_ID is not '0' (Box root)
+    if (process.env.BOX_PROJECTS_FOLDER_ID === '0') {
+      throw new Error(
+        'BOX_PROJECTS_FOLDER_ID cannot be "0" (Box root folder). ' +
+        'Please create a dedicated /ELN-Root/Projects folder and set its ID.'
+      );
+    }
   }
-}
-
-/**
- * Get or create the Box SDK client instance
- * Uses JWT authentication with service account
- */
-export function getBoxClient() {
-  if (cachedClient) {
-    return cachedClient;
+  
+  function formatPrivateKey(key: string): string {
+    // If key is not a string, return empty (will fail validation)
+    if (!key) return '';
+    
+    // If it already contains real newlines, it's likely correct
+    if (key.includes('\n')) {
+      return key;
+    }
+    
+    // Replace literal \n with real newlines
+    return key.replace(/\\n/g, '\n');
   }
-
-  // Validate all required environment variables
-  validateBoxEnvVars();
-
-  try {
-    const sdk = BoxSDK.getPreconfiguredInstance({
-      boxAppSettings: {
-        clientID: process.env.BOX_CLIENT_ID!,
-        clientSecret: process.env.BOX_CLIENT_SECRET!,
-        appAuth: {
-          publicKeyID: process.env.BOX_PUBLIC_KEY_ID!,
-          privateKey: process.env.BOX_PRIVATE_KEY!.replace(/\\n/g, '\n'),
-          passphrase: process.env.BOX_PASSPHRASE!,
+  
+  /**
+   * Get or create the Box SDK client instance
+   * Uses JWT authentication with service account
+   */
+  export function getBoxClient() {
+    if (cachedClient) {
+      return cachedClient;
+    }
+  
+    try {
+      // Validate all required environment variables
+      validateBoxEnvVars();
+      
+      const privateKey = formatPrivateKey(process.env.BOX_PRIVATE_KEY!);
+  
+      const sdk = BoxSDK.getPreconfiguredInstance({
+        boxAppSettings: {
+          clientID: process.env.BOX_CLIENT_ID!,
+          clientSecret: process.env.BOX_CLIENT_SECRET!,
+          appAuth: {
+            publicKeyID: process.env.BOX_PUBLIC_KEY_ID!,
+            privateKey: privateKey,
+            passphrase: process.env.BOX_PASSPHRASE!,
+          },
         },
-      },
-      enterpriseID: process.env.BOX_ENTERPRISE_ID!,
-    });
-
-    // Service account client (acts as the app)
-    cachedClient = sdk.getAppAuthClient('enterprise');
-
-    return cachedClient;
-  } catch (error) {
-    console.error('Failed to initialize Box SDK client:', error);
-    throw new Error('Box SDK initialization failed. Check your environment variables.');
+        enterpriseID: process.env.BOX_ENTERPRISE_ID!,
+      });
+  
+      // Service account client (acts as the app)
+      cachedClient = sdk.getAppAuthClient('enterprise');
+  
+      return cachedClient;
+    } catch (error) {    if (process.env.NODE_ENV !== 'production') {
+      console.warn(
+        '****************************************************************************************************\n' +
+        '** WARNING: Box SDK initialization failed. This is likely because required Box environment        **\n' +
+        '** variables are not set. The application will use a mock client for local development.           **\n' +
+        '** Box UI Elements will not work.                                                                 **\n' +
+        '****************************************************************************************************'
+      );
+      // Return a mock client in development to allow the app to run
+      cachedClient = {
+        exchangeToken: async () => ({
+          accessToken: 'mock_token',
+        }),
+        // Add other methods that are called in the app to prevent crashes
+      } as any;
+      return cachedClient;
+    } else {
+      // In production, always throw the error
+      console.error('Failed to initialize Box SDK client:', error);
+      throw new Error('Box SDK initialization failed. Check your environment variables.');
+    }
   }
 }
 

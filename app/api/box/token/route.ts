@@ -30,14 +30,40 @@ export async function GET(request: NextRequest) {
   try {
     const client = getBoxClient();
     const resourceType = fileId ? 'files' : 'folders';
-    const resourceId = fileId || folderId;
-    const resource = `https://api.box.com/2.0/${resourceType}/${resourceId}`;
+      const resourceId = fileId || folderId;
+      const resource = `https://api.box.com/2.0/${resourceType}/${resourceId}`;
+      
+      // Security: Validate requested scopes against a whitelist
+      const allowedScopes = new Set([
+        'item_preview', 
+        'item_download', 
+        'item_upload', 
+        'item_share',
+        'item_delete', // Only if we really want to allow deletion
+        'base_explorer', 
+        'base_picker',
+        'base_preview',
+        'root_readonly',
+        'annotation_edit',
+        'annotation_view_all',
+        'annotation_view_self'
+      ]);
     
-    const scopes = scopesParam.split(',');
+      const requestedScopes = scopesParam.split(',');
+      const scopes = requestedScopes.filter(scope => allowedScopes.has(scope));
     
-    const downscopedToken = await client.exchangeToken(scopes, resource);
+      if (scopes.length === 0) {
+        // Default to minimum safe scopes if all requested scopes were invalid
+        scopes.push('item_preview');
+      }
+      
+      const downscopedToken = await client.exchangeToken(scopes, resource);
 
-    return NextResponse.json(downscopedToken);
+    // Normalize token response to camelCase for frontend consistency
+    // Box SDK/API returns 'access_token', Mock might return 'accessToken'
+    const token = downscopedToken.access_token || downscopedToken.accessToken;
+
+    return NextResponse.json({ accessToken: token });
   } catch (err: any) {
     console.error('Token endpoint error details:', err);
 

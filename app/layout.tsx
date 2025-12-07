@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Roboto, Roboto_Slab } from "next/font/google"; // Import both fonts
 import "./globals.css";
 import AuthProvider from "./components/AuthProvider";
+import BoxClientProvider from "./components/box/BoxClientProvider";
 import UserMenu from "./components/UserMenu";
 import BeakerIcon from "./components/BeakerIcon"; // Import BeakerIcon
 
@@ -32,7 +33,8 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning className={`${roboto.variable} ${robotoSlab.variable}`}>
       <body className="font-body antialiased">
         <AuthProvider>
-          <header className="bg-primary text-white shadow-md"> {/* Updated header background and text color */}
+          <BoxClientProvider>
+            <header className="bg-primary text-white shadow-md"> {/* Updated header background and text color */}
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
               <div className="flex h-16 justify-between">
                 <div className="flex">
@@ -89,6 +91,7 @@ export default function RootLayout({
               </div>
             </div>
           </footer>
+          </BoxClientProvider>
         </AuthProvider>
       </body>
     </html>
