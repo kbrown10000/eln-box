@@ -65,6 +65,12 @@ export default function RootLayout({
                     >
                       Projects
                     </a>
+                    <a
+                      href="/about"
+                      className="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-body hover:border-gray-300 hover:text-gray-200"
+                    >
+                      About
+                    </a>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">

@@ -31,10 +31,10 @@ const Hero = () => {
                 Start Free Trial
               </a>
               <a
-                href="/contact"
+                href="/about"
                 className="border border-white/70 text-white font-body font-semibold px-6 py-3 rounded-md hover:bg-white/10 transition"
               >
-                Request a Demo
+                How it Works
               </a>
             </div>
           </div>
