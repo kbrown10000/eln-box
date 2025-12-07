@@ -14,6 +14,10 @@ export async function GET(
   try {
     const boxClient = getBoxClient();
 
+    if (!boxClient) {
+        throw new Error("Failed to initialize Box Client");
+    }
+
     // Get download URL from Box
     const downloadUrl = await boxClient.downloads.getDownloadUrl(fileId);
 
