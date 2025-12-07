@@ -75,6 +75,7 @@ export async function getProject(client: BoxClient, folderId: string): Promise<P
       description: metadata.description,
     };
   } catch (error) {
+    console.warn(`DEBUG: Failed to get metadata for project ${folderId}:`, error); // Added debug log
     // If metadata doesn't exist, fall back to folder name parsing
     const folder = await client.folders.getFolderById(folderId);
     const nameParts = folder.name!.split('-');
@@ -130,12 +131,11 @@ export async function listProjects(
   const executeFallback = async () => {
     const projectsFolderId = getProjectsFolderId();
     const items = await client.folders.getFolderItems(projectsFolderId, {
-      // fields: ['name', 'created_at', 'modified_at'], // Removed fields
-      // limit, offset // Removed standard options that might not be in strict type or supported in getFolderItems signature directly if different
+      // limit, offset // Removed to match strict type
     });
 
     const projects: Project[] = [];
-    for (const item of items.entries || []) { // Added optional chaining/fallback
+    for (const item of items.entries || []) {
       if (item.type === 'folder') {
         try {
           const project = await getProject(client, item.id);
@@ -198,9 +198,10 @@ export async function listProjects(
       };
     });
 
+    // Force fallback if metadata query returns 0 results (likely indexing delay)
     if (projects.length === 0) {
-      console.log("Metadata query returned 0 results. Falling back to folder traversal.");
-      return executeFallback();
+        console.log("Metadata query returned 0 results. Falling back to folder traversal.");
+        return executeFallback();
     }
 
     return {
