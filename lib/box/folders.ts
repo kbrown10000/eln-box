@@ -198,6 +198,11 @@ export async function listProjects(
       };
     });
 
+    if (projects.length === 0) {
+      console.log("Metadata query returned 0 results. Falling back to folder traversal.");
+      return executeFallback();
+    }
+
     return {
       items: projects,
       totalCount: projects.length, // Approximate
