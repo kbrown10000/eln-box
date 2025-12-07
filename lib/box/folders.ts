@@ -163,27 +163,30 @@ export async function listProjects(
     
     // Optimistic Metadata Query
     // Note: This requires the template to be indexed.
+    
+    const enterpriseId = process.env.BOX_ENTERPRISE_ID;
+    const from = `enterprise_${enterpriseId}.projectMetadata`;
 
     const results = await client.search.searchByMetadataQuery({
-      from: "enterprise.projectMetadata",
+      from,
       ancestorFolderId: projectsFolderId,
       query: "projectCode IS NOT NULL",
       fields: [
         "name", "created_at", 
-        "metadata.enterprise.projectMetadata.projectCode",
-        "metadata.enterprise.projectMetadata.projectName",
-        "metadata.enterprise.projectMetadata.piName",
-        "metadata.enterprise.projectMetadata.piEmail",
-        "metadata.enterprise.projectMetadata.department",
-        "metadata.enterprise.projectMetadata.startDate",
-        "metadata.enterprise.projectMetadata.status",
-        "metadata.enterprise.projectMetadata.description"
+        `metadata.${from}.projectCode`,
+        `metadata.${from}.projectName`,
+        `metadata.${from}.piName`,
+        `metadata.${from}.piEmail`,
+        `metadata.${from}.department`,
+        `metadata.${from}.startDate`,
+        `metadata.${from}.status`,
+        `metadata.${from}.description`
       ],
       limit
     });
 
     const projects = (results.entries || []).map((item: any) => {
-      const md = item.metadata?.enterprise?.projectMetadata || {};
+      const md = item.metadata?.[`enterprise_${enterpriseId}`]?.projectMetadata || {};
       // Map metadata to Project type
       return {
         folderId: item.id,
@@ -417,28 +420,31 @@ export async function listExperiments(
 
   try {
     // Optimistic Metadata Query
+    const enterpriseId = process.env.BOX_ENTERPRISE_ID;
+    const from = `enterprise_${enterpriseId}.experimentMetadata`;
+
     const results = await client.search.searchByMetadataQuery({
-      from: "enterprise.experimentMetadata",
+      from,
       ancestorFolderId: experimentsFolderId,
       query: "experimentId IS NOT NULL", // Basic filter
       fields: [
         "name", "created_at",
-        "metadata.enterprise.experimentMetadata.experimentId",
-        "metadata.enterprise.experimentMetadata.experimentTitle",
-        "metadata.enterprise.experimentMetadata.objective",
-        "metadata.enterprise.experimentMetadata.hypothesis",
-        "metadata.enterprise.experimentMetadata.ownerName",
-        "metadata.enterprise.experimentMetadata.ownerEmail",
-        "metadata.enterprise.experimentMetadata.startedAt",
-        "metadata.enterprise.experimentMetadata.completedAt",
-        "metadata.enterprise.experimentMetadata.status",
-        "metadata.enterprise.experimentMetadata.tags"
+        `metadata.${from}.experimentId`,
+        `metadata.${from}.experimentTitle`,
+        `metadata.${from}.objective`,
+        `metadata.${from}.hypothesis`,
+        `metadata.${from}.ownerName`,
+        `metadata.${from}.ownerEmail`,
+        `metadata.${from}.startedAt`,
+        `metadata.${from}.completedAt`,
+        `metadata.${from}.status`,
+        `metadata.${from}.tags`
       ],
       limit
     });
 
     const experiments = (results.entries || []).map((item: any) => {
-      const md = item.metadata?.enterprise?.experimentMetadata || {};
+      const md = item.metadata?.[`enterprise_${enterpriseId}`]?.experimentMetadata || {};
       return {
         folderId: item.id,
         experimentId: md.experimentId || 'UNKNOWN',

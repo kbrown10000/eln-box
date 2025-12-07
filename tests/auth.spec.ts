@@ -9,15 +9,15 @@ test.describe('Authentication Flow', () => {
     await expect(page).toHaveURL(/\/login/);
     
     // Verify login page content - use specific heading role to avoid ambiguity with nav links
-    await expect(page.getByRole('heading', { name: 'LabNoteX' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Synapse' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Sign in with Box' })).toBeVisible();
   });
 
   test('should display login page correctly', async ({ page }) => {
     await page.goto('/login');
     
-    await expect(page.getByRole('heading', { name: 'LabNoteX' })).toBeVisible();
-    await expect(page.getByText('Secure, Cloud-Based Research')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Synapse' })).toBeVisible();
+    await expect(page.getByText('The Intelligent Lab OS')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Sign in with Box' })).toBeVisible();
   });
 });
