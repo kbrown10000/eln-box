@@ -17,11 +17,10 @@ const Hero = () => {
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div className="space-y-6">
             <h1 className="text-4xl lg:text-5xl font-heading font-bold leading-tight">
-              The Future of Your Lab&apos;s Research, Powered by Box.
+              Accelerate Outcomes in Life Sciences.
             </h1>
             <p className="text-lg font-body text-white max-w-2xl">
-              Seamlessly manage your experiments, data, and collaboration with our Vercel-deployed platform.
-              Securely store and access all content via your trusted Box account.
+              The USDM Box-Centric ELN. Driving effective science, commercialization, and scale with trusted, validated technology.
             </p>
             <div className="flex flex-wrap items-center gap-4">
               <a
@@ -39,14 +38,14 @@ const Hero = () => {
             </div>
           </div>
           <div className="hidden lg:flex justify-center">
-            {/* Placeholder for the tablet image */}
+            {/* USDM Lab Image */}
             <div className="relative w-full max-w-lg">
               <img
-                src="https://via.placeholder.com/600x400/0A2540/FFFFFF?text=LabNoteX+App"
-                alt="Lab Notebook Application on Tablet"
+                src="/usdm-lab.png"
+                alt="USDM Life Sciences Lab"
                 className="w-full rounded-lg shadow-2xl transform rotate-3"
               />
-              <div className="absolute inset-0 bg-primary/50 rounded-lg transform rotate-3"></div>
+              <div className="absolute inset-0 bg-primary/20 rounded-lg transform rotate-3"></div>
             </div>
           </div>
         </div>

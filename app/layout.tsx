@@ -90,6 +90,8 @@ export default function RootLayout({
                 </div>
                 <div className="flex items-center space-x-3">
                   <span className="font-medium">Powered by</span>
+                  <span className="font-bold text-white">USDM Life Sciences</span>
+                  <span className="text-gray-400">+</span>
                   <span className="font-medium">Vercel</span>
                   <span className="text-gray-400">+</span>
                   <span className="font-bold text-white">box</span> {/* Changed to white for contrast */}
