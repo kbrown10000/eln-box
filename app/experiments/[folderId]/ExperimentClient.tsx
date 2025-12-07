@@ -13,6 +13,7 @@ import { ingestInstrumentFile } from '@/lib/actions/ingestion';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import IngestionReview from '@/app/components/experiment/IngestionReview';
+import ProtocolGeneratorModal from '@/app/components/experiment/ProtocolGeneratorModal';
 
 interface ExperimentClientProps {
   experiment: Experiment;
@@ -72,12 +73,13 @@ export default function ExperimentClient({
   const [reagents, setReagents] = useState<Reagent[]>([]);
   const [yieldData, setYieldData] = useState<YieldData | null>(null);
   const [spectra, setSpectra] = useState<Spectrum[]>([]);
-  // const [files, setFiles] = useState<BoxFile[]>([]); // Handled by BoxHub
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState(experiment.status);
   const [showInstrumentFilePicker, setShowInstrumentFilePicker] = useState(false);
   const [ingestionResults, setIngestionResults] = useState<any | null>(null);
+  const [showProtocolGenerator, setShowProtocolGenerator] = useState(false);
 
   // Fetch experiment data from database
   const fetchData = useCallback(async () => {
@@ -137,31 +139,8 @@ export default function ExperimentClient({
     }
   }, [folderId]);
 
-  // Fetch Box files - DEPRECATED: Handled by Box UI Element now
-  /*
-  const fetchFiles = useCallback(async () => {
-    try {
-      const response = await fetch(`/api/box/folders/${folderId}/items`);
-      if (response.ok) {
-        const data = await response.json();
-        setFiles(
-          data.entries?.map((item: any) => ({
-            id: item.id,
-            name: item.name,
-            type: item.type,
-            size: item.size,
-          })) || []
-        );
-      }
-    } catch (err) {
-      console.error('Error fetching files:', err);
-    }
-  }, [folderId]);
-  */
-
   useEffect(() => {
     fetchData();
-    // fetchFiles(); // Handled by BoxHub
   }, [fetchData]);
 
   // Protocol step handlers
@@ -250,9 +229,9 @@ export default function ExperimentClient({
   };
 
   const handleFileSelectedForIngestion = async (fileId: string, fileName: string) => {
-    setShowInstrumentFilePicker(false); // Close picker
+    setShowInstrumentFilePicker(false);
     setIsSaving(true);
-    setIngestionResults(null); // Clear previous results
+    setIngestionResults(null);
 
     try {
       const results = await ingestInstrumentFile(fileId, folderId);
@@ -267,43 +246,40 @@ export default function ExperimentClient({
   };
 
   const handleApplyIngestedYields = (yieldsToApply: any[]) => {
-    // Logic to add yields to the experiment
-    // This will likely involve calling the existing handleSaveYield or a new action
     console.log('Applying yields:', yieldsToApply);
-    alert('Yields applied (console log for now)'); // Placeholder
-    setIngestionResults(null); // Clear results after applying
+    alert('Yields applied (console log for now)');
+    setIngestionResults(null);
   };
 
   const handleApplyIngestedSpectra = (spectraToApply: any[]) => {
-    // Logic to add spectra to the experiment
-    // This will likely involve calling the existing handleAddSpectrum or a new action
     console.log('Applying spectra:', spectraToApply);
-    alert('Spectra applied (console log for now)'); // Placeholder
-    setIngestionResults(null); // Clear results after applying
+    alert('Spectra applied (console log for now)');
+    setIngestionResults(null);
   };
 
   const handleApplyIngestedReagents = (reagentsToApply: any[]) => {
-    // Logic to add reagents to the experiment
-    // This will likely involve calling the existing handleAddReagent or a new action
     console.log('Applying reagents:', reagentsToApply);
-    alert('Reagents applied (console log for now)'); // Placeholder
-    setIngestionResults(null); // Clear results after applying
+    alert('Reagents applied (console log for now)');
+    setIngestionResults(null);
   };
 
   const handleCancelIngestion = () => {
-    setIngestionResults(null); // Clear results
+    setIngestionResults(null);
   };
 
-  // Reagent handlers
+  const handleProtocolGenerated = (generatedProtocol: any) => {
+    console.log('Generated Protocol:', generatedProtocol);
+    generatedProtocol.steps.forEach((step: any) => {
+      handleAddProtocolStep(step.instruction);
+    });
+    alert('AI Generated Protocol added to your experiment. Please review.');
+  };
 
   const handleStatusChange = async (newStatus: any) => {
     if (!confirm(`Are you sure you want to change status to ${newStatus}?`)) return;
     setIsSaving(true);
     try {
       await updateExperimentStatus(folderId, newStatus);
-      // Optimistic update - actual update comes from revalidate
-      // However, client state needs update for UI feedback
-      // We can also reload the window to be sure, or rely on revalidate
       window.location.reload(); 
     } catch (err: any) {
       alert(err.message);
@@ -317,10 +293,8 @@ export default function ExperimentClient({
     setIsSaving(true);
 
     try {
-      // 1. Generate PDF
       const doc = new jsPDF();
       
-      // Title
       doc.setFontSize(20);
       doc.text(experiment.experimentTitle, 14, 20);
       doc.setFontSize(12);
@@ -328,7 +302,6 @@ export default function ExperimentClient({
       doc.text(`Author: ${experiment.ownerName}`, 14, 36);
       doc.text(`Date: ${new Date().toLocaleDateString()}`, 14, 42);
 
-      // Objective
       doc.setFontSize(14);
       doc.text('Objective', 14, 55);
       doc.setFontSize(10);
@@ -337,7 +310,6 @@ export default function ExperimentClient({
 
       let yPos = 62 + (splitObjective.length * 5) + 10;
 
-      // Protocol
       doc.setFontSize(14);
       doc.text('Protocol', 14, yPos);
       yPos += 8;
@@ -354,7 +326,6 @@ export default function ExperimentClient({
 
       yPos = (doc as any).lastAutoTable.finalY + 15;
 
-      // Reagents
       doc.setFontSize(14);
       doc.text('Reagents', 14, yPos);
       yPos += 8;
@@ -374,7 +345,6 @@ export default function ExperimentClient({
 
       yPos = (doc as any).lastAutoTable.finalY + 15;
 
-      // Results
       if (yieldData) {
          doc.setFontSize(14);
          doc.text('Results', 14, yPos);
@@ -385,12 +355,10 @@ export default function ExperimentClient({
          doc.text(`Percentage: ${yieldData.percentage}%`, 14, yPos + 12);
       }
 
-      // Save PDF Blob
       const pdfBlob = doc.output('blob');
       const formData = new FormData();
       formData.append('file', pdfBlob, `${experiment.experimentId}_Report.pdf`);
 
-      // 2. Upload to Box (Root of Experiment Folder for simplicity)
       const uploadRes = await fetch(`/api/box/folders/${folderId}/upload`, {
         method: 'POST',
         body: formData,
@@ -399,11 +367,6 @@ export default function ExperimentClient({
       if (!uploadRes.ok) throw new Error('Failed to upload report');
       const uploadedFile = await uploadRes.json();
 
-      // 3. Create Sign Request
-      // Signers: Author and Owner (if different), or just Owner
-      // For demo, just sign by the current user (who clicked the button)
-      // Ideally, we fetch the PI email from the project metadata
-      
       const signers = [
           { email: experiment.ownerEmail, role: 'signer' }
       ];
@@ -421,7 +384,139 @@ export default function ExperimentClient({
   };
 
   const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'in-progress':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'review':
+        return 'bg-purple-100 text-purple-800';
+      case 'rejected':
+        return 'bg-red-100 text-red-800';
+      case 'completed':
+        return 'bg-green-100 text-green-800';
+      case 'locked':
+        return 'bg-gray-800 text-white';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
 
+  // Reagent handlers
+  const handleAddReagent = async (reagent: Omit<Reagent, 'id'>) => {
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/experiment-data/${folderId}/reagents`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(reagent),
+      });
+
+      if (response.ok) {
+        const newReagent = await response.json();
+        setReagents(prev => [...prev, {
+          id: newReagent.id,
+          name: newReagent.name,
+          amount: parseFloat(newReagent.amount) || 0,
+          unit: newReagent.unit,
+          molarAmount: newReagent.molarAmount ? parseFloat(newReagent.molarAmount) : undefined,
+          observations: newReagent.observations,
+        }]);
+      }
+    } catch (err) {
+      console.error('Error adding reagent:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteReagent = async (id: string) => {
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/experiment-data/${folderId}/reagents?id=${id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setReagents(prev => prev.filter(r => r.id !== id));
+      }
+    } catch (err) {
+      console.error('Error deleting reagent:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Yield handler
+  const handleSaveYield = async (data: { theoretical: number; actual: number; unit: string }) => {
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/experiment-data/${folderId}/yields`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      if (response.ok) {
+        const savedYield = await response.json();
+        setYieldData({
+          id: savedYield.id,
+          theoretical: parseFloat(savedYield.theoretical) || 0,
+          actual: parseFloat(savedYield.actual) || 0,
+          percentage: parseFloat(savedYield.percentage) || 0,
+          unit: savedYield.unit,
+          productName: savedYield.productName,
+        });
+      }
+    } catch (err) {
+      console.error('Error saving yield:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Spectrum handlers
+  const handleAddSpectrum = async (spectrum: Omit<Spectrum, 'id'>) => {
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/experiment-data/${folderId}/spectra`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(spectrum),
+      });
+
+      if (response.ok) {
+        const newSpectrum = await response.json();
+        setSpectra(prev => [...prev, {
+          id: newSpectrum.id,
+          spectrumType: newSpectrum.spectrumType,
+          caption: newSpectrum.caption || '',
+          boxFileId: newSpectrum.boxFileId || '',
+          fileName: newSpectrum.title || '',
+          peakData: newSpectrum.peakData || {},
+        }]);
+      }
+    } catch (err) {
+      console.error('Error adding spectrum:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteSpectrum = async (id: string) => {
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/experiment-data/${folderId}/spectra?id=${id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setSpectra(prev => prev.filter(s => s.id !== id));
+      }
+    } catch (err) {
+      console.error('Error deleting spectrum:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -529,12 +624,18 @@ export default function ExperimentClient({
         </div>
 
         {/* Import Instrument File Button */}
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex justify-end gap-2">
           <button
             onClick={() => setShowInstrumentFilePicker(true)}
             className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 text-sm font-medium"
           >
             Import from Instrument File (AI)
+          </button>
+          <button
+            onClick={() => setShowProtocolGenerator(true)}
+            className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm font-medium"
+          >
+            Generate Protocol (AI)
           </button>
         </div>
 
@@ -632,6 +733,14 @@ export default function ExperimentClient({
           onApplySpectra={handleApplyIngestedSpectra}
           onApplyReagents={handleApplyIngestedReagents}
           onCancel={handleCancelIngestion}
+        />
+      )}
+
+      {showProtocolGenerator && (
+        <ProtocolGeneratorModal
+          experimentFolderId={folderId}
+          onClose={() => setShowProtocolGenerator(false)}
+          onProtocolGenerated={handleProtocolGenerated}
         />
       )}
     </div>
