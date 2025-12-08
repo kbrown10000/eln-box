@@ -28,6 +28,14 @@ export default async function ExperimentDetailPage({
   const { folderId } = await params;
   const experiment = await getExperiment(folderId);
 
+  if (experiment) {
+      console.log('--- DEBUG: Experiment Data Types ---');
+      for (const [key, value] of Object.entries(experiment)) {
+          console.log(`${key}:`, typeof value, value instanceof Date ? '(Date Object)' : '', value);
+      }
+      console.log('--- End DEBUG ---');
+  }
+
   if (!experiment) {
     return (
       <div className="container mx-auto p-8">

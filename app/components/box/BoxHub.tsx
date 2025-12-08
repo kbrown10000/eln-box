@@ -36,10 +36,22 @@ export default function BoxHub({ folderId, folderName, onFileSelect }: BoxHubPro
         const tokenResponse = await fetch(
           `/api/box/token?folderId=${folderId}&scopes=item_preview,item_download,item_upload,base_explorer,item_delete,item_info`
         );
+        
         if (!tokenResponse.ok) {
-          const err = await tokenResponse.json();
-          throw new Error(err.error || 'Failed to get access token');
+          const errorText = await tokenResponse.text();
+          let errorMessage = `Failed to get access token: ${tokenResponse.status} ${tokenResponse.statusText}`;
+          try {
+            const errorJson = JSON.parse(errorText);
+            if (errorJson.error) errorMessage = errorJson.error;
+            if (errorJson.details) errorMessage += ` (${errorJson.details})`;
+          } catch {
+            // Use fallback message
+            console.warn('API returned non-JSON error:', errorText);
+          }
+          throw new Error(errorMessage);
         }
+        
+        
         const { accessToken } = await tokenResponse.json();
 
         // Clean up previous explorer instance

@@ -7,6 +7,16 @@ const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
 
 /**
+ * Helper to ensure dates are always strings
+ */
+function toDateString(date: any): string {
+  if (!date) return '';
+  if (typeof date === 'string') return date;
+  if (date instanceof Date) return date.toISOString();
+  return String(date);
+}
+
+/**
  * Create a new entry as a markdown file
  */
 export async function createEntry(
@@ -98,14 +108,14 @@ export async function getEntry(client: BoxClient, fileId: string): Promise<Entry
   return {
     fileId,
     entryId: metadata.entryId || fileInfo.id,
-    entryDate: metadata.entryDate || fileInfo.createdAt,
+    entryDate: toDateString(metadata.entryDate || fileInfo.createdAt),
     authorName: metadata.authorName || '',
     authorEmail: metadata.authorEmail || '',
     title: metadata.title || fileInfo.name!.replace('.md', ''),
     entryType: metadata.entryType || 'observation',
     status: metadata.status || 'draft',
     version: metadata.version || '1',
-    signedAt: metadata.signedAt,
+    signedAt: toDateString(metadata.signedAt),
     signedBy: metadata.signedBy,
     signatureHash: metadata.signatureHash,
     content,
@@ -168,39 +178,106 @@ export async function listEntries(
   const limit = Math.min(options.limit || DEFAULT_LIMIT, MAX_LIMIT);
   const offset = options.offset || 0;
 
-  // Find Entries subfolder
-  const items = await client.folders.getFolderItems(experimentFolderId);
-  const entriesFolder = items.entries?.find((e: any) => e.name === 'Entries');
+  // Find Entries subfolder first
+  let entriesFolderId: string | null = null;
+  try {
+      const items = await client.folders.getFolderItems(experimentFolderId);
+      const entriesFolder = items.entries?.find((e: any) => e.name === 'Entries');
+      if (entriesFolder) {
+          entriesFolderId = entriesFolder.id;
+      }
+  } catch (e) {
+      console.warn('Failed to find Entries folder:', e);
+  }
 
-  if (!entriesFolder) {
+  if (!entriesFolderId) {
     return { items: [], totalCount: 0, limit, offset };
   }
 
-  // Get entry files with pagination
-  const entryItems = await client.folders.getFolderItems(entriesFolder.id, {
-    // limit,
-    // offset,
-  });
-
-  const entries: Entry[] = [];
-
-  for (const item of entryItems.entries || []) {
-    if (item.type === 'file' && item.name!.endsWith('.md')) {
-      try {
-        const entry = await getEntry(client, item.id);
-        entries.push(entry);
-      } catch (error) {
-        console.error(`Failed to get entry ${item.id}:`, error);
+  // Fallback logic
+  const executeFallback = async () => {
+      const entryItems = await client.folders.getFolderItems(entriesFolderId!, {
+        // limit, offset // API might not support strict type here, or SDK differences
+      });
+    
+      const entries: Entry[] = [];
+    
+      for (const item of entryItems.entries || []) {
+        if (item.type === 'file' && item.name!.endsWith('.md')) {
+          try {
+            const entry = await getEntry(client, item.id);
+            entries.push(entry);
+          } catch (error) {
+            console.error(`Failed to get entry ${item.id}:`, error);
+          }
+        }
       }
-    }
-  }
-
-  return {
-    items: entries,
-    totalCount: entryItems.totalCount || entryItems.entries?.length || 0,
-    limit,
-    offset,
+    
+      return {
+        items: entries,
+        totalCount: entryItems.totalCount || entryItems.entries?.length || 0,
+        limit,
+        offset,
+      };
   };
+
+  if (offset > 0) return executeFallback();
+
+  try {
+    const enterpriseId = process.env.BOX_ENTERPRISE_ID;
+    const from = `enterprise_${enterpriseId}.entryMetadata`;
+
+    const results = await client.search.searchByMetadataQuery({
+      from,
+      ancestorFolderId: entriesFolderId,
+      query: "entryId IS NOT NULL",
+      fields: [
+        "name", "created_at",
+        `metadata.${from}.entryId`,
+        `metadata.${from}.entryDate`,
+        `metadata.${from}.authorName`,
+        `metadata.${from}.authorEmail`,
+        `metadata.${from}.title`,
+        `metadata.${from}.entryType`,
+        `metadata.${from}.status`,
+        `metadata.${from}.version`,
+        `metadata.${from}.signedAt`,
+        `metadata.${from}.signedBy`,
+        `metadata.${from}.signatureHash`
+      ],
+      limit
+    });
+
+    const entries = (results.entries || []).map((item: any) => {
+      const md = item.metadata?.[`enterprise_${enterpriseId}`]?.entryMetadata || {};
+      return {
+        fileId: item.id,
+        entryId: md.entryId || item.id,
+        entryDate: toDateString(md.entryDate || item.createdAt || item.created_at),
+        authorName: md.authorName || '',
+        authorEmail: md.authorEmail || '',
+        title: md.title || item.name.replace('.md', ''),
+        entryType: md.entryType || 'observation',
+        status: md.status || 'draft',
+        version: md.version || '1',
+        signedAt: toDateString(md.signedAt),
+        signedBy: md.signedBy,
+        signatureHash: md.signatureHash,
+        content: undefined, // Content not loaded in list view for performance
+      };
+    });
+
+    return {
+      items: entries,
+      totalCount: entries.length,
+      limit,
+      offset
+    };
+
+  } catch (error) {
+    console.warn("Metadata Query optimization failed for entries, using fallback:", error);
+    return executeFallback();
+  }
 }
 
 /**

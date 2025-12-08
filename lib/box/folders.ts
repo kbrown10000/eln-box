@@ -2,6 +2,16 @@ import type { BoxClient } from './client';
 import { Project, Experiment } from './types';
 
 /**
+ * Helper to ensure dates are always strings (for serialization)
+ */
+function toDateString(date: any): string {
+  if (!date) return '';
+  if (typeof date === 'string') return date;
+  if (date instanceof Date) return date.toISOString();
+  return String(date);
+}
+
+/**
  * Get the projects folder ID from environment
  * Fails fast if not configured (validation happens in getBoxClient)
  */
@@ -70,12 +80,12 @@ export async function getProject(client: BoxClient, folderId: string): Promise<P
       piName: metadata.piName,
       piEmail: metadata.piEmail,
       department: metadata.department,
-      startDate: metadata.startDate,
+      startDate: toDateString(metadata.startDate),
       status: metadata.status,
       description: metadata.description,
     };
   } catch (error) {
-    console.warn(`DEBUG: Failed to get metadata for project ${folderId}:`, error); // Added debug log
+    console.warn(`DEBUG: Failed to get metadata for project ${folderId}:`, error);
     // If metadata doesn't exist, fall back to folder name parsing
     const folder = await client.folders.getFolderById(folderId);
     const nameParts = folder.name!.split('-');
@@ -89,7 +99,7 @@ export async function getProject(client: BoxClient, folderId: string): Promise<P
       piName: '',
       piEmail: '',
       department: '',
-      startDate: folder.createdAt ? String(folder.createdAt) : new Date().toISOString(),
+      startDate: toDateString(folder.createdAt || new Date()),
       status: 'planning',
       description: '',
     };
@@ -162,8 +172,6 @@ export async function listProjects(
     const projectsFolderId = getProjectsFolderId();
     
     // Optimistic Metadata Query
-    // Note: This requires the template to be indexed.
-    
     const enterpriseId = process.env.BOX_ENTERPRISE_ID;
     const from = `enterprise_${enterpriseId}.projectMetadata`;
 
@@ -195,7 +203,7 @@ export async function listProjects(
         piName: md.piName || '',
         piEmail: md.piEmail || '',
         department: md.department || '',
-        startDate: md.startDate || item.createdAt || item.created_at,
+        startDate: toDateString(md.startDate || item.createdAt || item.created_at),
         status: md.status || 'planning',
         description: md.description || ''
       };
@@ -327,7 +335,7 @@ export async function getExperiment(client: BoxClient, folderId: string): Promis
   try {
     const metadata: any = await client.folderMetadata.getFolderMetadataById(folderId, 'enterprise', 'experimentMetadata');
 
-    return {
+    const experiment = {
       folderId,
       experimentId: metadata.experimentId,
       experimentTitle: metadata.experimentTitle,
@@ -335,11 +343,15 @@ export async function getExperiment(client: BoxClient, folderId: string): Promis
       hypothesis: metadata.hypothesis,
       ownerName: metadata.ownerName,
       ownerEmail: metadata.ownerEmail,
-      startedAt: metadata.startedAt,
-      completedAt: metadata.completedAt,
+      startedAt: toDateString(metadata.startedAt),
+      completedAt: toDateString(metadata.completedAt),
       status: metadata.status,
       tags: metadata.tags || [],
     };
+    
+    // Ensure strict serializability
+    return JSON.parse(JSON.stringify(experiment));
+
   } catch (error) {
     // Fallback to folder name parsing
     const folder = await client.folders.getFolderById(folderId);
@@ -347,7 +359,7 @@ export async function getExperiment(client: BoxClient, folderId: string): Promis
     const experimentId = nameParts[0] || 'UNKNOWN';
     const experimentTitle = nameParts.slice(1).join(' ') || folder.name!;
 
-    return {
+    const fallback = {
       folderId,
       experimentId,
       experimentTitle,
@@ -358,6 +370,7 @@ export async function getExperiment(client: BoxClient, folderId: string): Promis
       status: 'draft',
       tags: [],
     };
+    return JSON.parse(JSON.stringify(fallback));
   }
 }
 
@@ -409,7 +422,7 @@ export async function listExperiments(
       }
     
       return {
-        items: experiments,
+        items: JSON.parse(JSON.stringify(experiments)),
         totalCount: experimentItems.totalCount || experimentItems.entries?.length || 0,
         limit,
         offset,
@@ -453,19 +466,19 @@ export async function listExperiments(
         hypothesis: md.hypothesis || '',
         ownerName: md.ownerName || '',
         ownerEmail: md.ownerEmail || '',
-        startedAt: md.startedAt,
-        completedAt: md.completedAt,
+        startedAt: toDateString(md.startedAt),
+        completedAt: toDateString(md.completedAt),
         status: md.status || 'draft',
         tags: md.tags || [],
       };
     });
 
-    return {
+    return JSON.parse(JSON.stringify({
       items: experiments,
       totalCount: experiments.length,
       limit,
       offset
-    };
+    }));
 
   } catch (error) {
     console.warn("Metadata Query optimization failed for experiments, using fallback:", error);

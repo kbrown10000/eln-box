@@ -28,12 +28,14 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const resourceId = fileId || folderId;
+    console.log('[API] Generating Box Token for:', resourceId);
     const client = getBoxClient();
     if (!client) {
         throw new Error("Failed to initialize Box Client");
     }
     const resourceType = fileId ? 'files' : 'folders';
-      const resourceId = fileId || folderId;
+      // const resourceId = fileId || folderId; // Removed re-declaration
       const resource = `https://api.box.com/2.0/${resourceType}/${resourceId}`;
       
       // Security: Validate requested scopes against a whitelist
@@ -61,21 +63,37 @@ export async function GET(request: NextRequest) {
       }
       
       // The new SDK uses auth.downscopeToken instead of exchangeToken
+      console.log('[API] Requesting downscoped token with scopes:', scopes);
       const downscopedToken = await client.auth.downscopeToken(
         scopes, 
         resource, 
         undefined // sharedLink
       );
+    
+    if (!downscopedToken || !downscopedToken.accessToken) {
+        throw new Error("Box SDK returned empty token");
+    }
 
     // Normalize token response to camelCase for frontend consistency
     const token = downscopedToken.accessToken;
+    console.log('[API] Token generated successfully');
 
     return NextResponse.json({ accessToken: token });
   } catch (err: any) {
-    console.error('Token endpoint error details:', err);
+    // Safe error logging
+    try {
+        console.error('Token endpoint error message:', err?.message || String(err));
+        if (err?.responseInfo) {
+             console.error('Box API Error Response:', JSON.stringify(err.responseInfo, null, 2));
+        } else {
+             console.error('Full Error Object:', JSON.stringify(err, Object.getOwnPropertyNames(err)));
+        }
+    } catch (logError) {
+        console.error('Failed to log error details:', logError);
+    }
 
     return NextResponse.json(
-      { error: 'Failed to get access token', details: err.message },
+      { error: 'Failed to get access token', details: err?.message || 'Unknown error' },
       { status: 500 }
     );
   }
