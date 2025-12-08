@@ -33,7 +33,7 @@ export async function GET(
     }
 
     // 2. Parse Yields
-    const yields = [];
+    const yields: any[] = [];
     if (typeof metadata.yield === 'number') {
         yields.push({
             id: 'yield-1', // Mock ID
@@ -46,7 +46,7 @@ export async function GET(
     }
 
     // 3. Parse Reagents
-    const reagents = [];
+    const reagents: any[] = [];
     if (metadata.keyReagentsIndex) {
         const names = metadata.keyReagentsIndex.split(',').map((s: string) => s.trim());
         names.forEach((name: string, index: number) => {
@@ -63,7 +63,7 @@ export async function GET(
     }
 
     // 4. Fetch Spectra (Files with spectrumMetadata)
-    const spectra = [];
+    const spectra: any[] = [];
     try {
         const specFrom = `enterprise_${enterpriseId}.spectrumMetadata`;
         // Search for files inside this experiment folder that have the metadata
