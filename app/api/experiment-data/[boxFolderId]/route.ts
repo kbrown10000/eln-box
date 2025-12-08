@@ -14,6 +14,9 @@ export async function GET(
 
   try {
     const client = getBoxClient();
+    if (!client) {
+      throw new Error('Box client not initialized');
+    }
     const enterpriseId = process.env.BOX_ENTERPRISE_ID;
 
     // 1. Fetch Experiment Folder Metadata
