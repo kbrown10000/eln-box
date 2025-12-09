@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
       piName: body.piName || session!.user.name,
       piEmail: body.piEmail || session!.user.email,
       department: body.department || '',
-      startDate: body.startDate || new Date().toISOString().split('T')[0],
+      startDate: body.startDate ? new Date(body.startDate).toISOString() : new Date().toISOString(),
       status: body.status || 'planning',
       description: body.description || '',
     });

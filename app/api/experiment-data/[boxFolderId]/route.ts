@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireApiAuth } from '@/lib/auth/session';
 import { getBoxClient } from '@/lib/box/client';
+import { db } from '@/lib/db';
+import {
+  experiments,
+  protocolSteps as protocolStepsSchema,
+  reagents as reagentsSchema,
+  yields as yieldsSchema,
+  spectra as spectraSchema
+} from '@/lib/db/schema';
+import { eq, asc } from 'drizzle-orm';
 
 // GET all experiment data by Box folder ID (From Box Metadata)
 export async function GET(
@@ -81,7 +90,7 @@ export async function GET(
 
         if (searchResults.entries) {
             for (const item of searchResults.entries) {
-                const md = item.metadata?.[`enterprise_${enterpriseId}`]?.spectrumMetadata || {};
+                const md = (item.metadata as any)?.[`enterprise_${enterpriseId}`]?.spectrumMetadata || {};
                 spectra.push({
                     id: item.id,
                     spectrumType: md.technique || 'Other',
@@ -96,8 +105,50 @@ export async function GET(
         console.warn('Error fetching spectra metadata:', e);
     }
 
-    // 5. Protocol Steps (Not in metadata yet)
-    const protocolSteps: any[] = [];
+    // 5. Protocol Steps, Reagents, Yields, Spectra (From Database)
+    let protocolSteps: any[] = [];
+    try {
+        const dbExperiment = await db.query.experiments.findFirst({
+            where: eq(experiments.boxFolderId, boxFolderId),
+            with: {
+                protocolSteps: { orderBy: asc(protocolStepsSchema.stepNumber) },
+                reagents: true,
+                yields: true,
+                spectra: true
+            }
+        });
+
+        if (dbExperiment) {
+            protocolSteps = dbExperiment.protocolSteps;
+            // Override metadata-based arrays if DB has data
+            if (dbExperiment.reagents.length > 0) {
+                // Map DB reagents to expected format (ensure numbers are numbers)
+                reagents.length = 0; // Clear metadata reagents
+                reagents.push(...dbExperiment.reagents.map(r => ({
+                    ...r,
+                    amount: parseFloat(r.amount as any) || 0,
+                    molarAmount: parseFloat(r.molarAmount as any) || 0
+                })));
+            }
+            
+            if (dbExperiment.yields.length > 0) {
+                yields.length = 0;
+                yields.push(...dbExperiment.yields.map(y => ({
+                    ...y,
+                    theoretical: parseFloat(y.theoretical as any) || 0,
+                    actual: parseFloat(y.actual as any) || 0,
+                    percentage: parseFloat(y.percentage as any) || 0
+                })));
+            }
+
+            if (dbExperiment.spectra.length > 0) {
+                spectra.length = 0;
+                spectra.push(...dbExperiment.spectra);
+            }
+        }
+    } catch (e) {
+        console.error('Error fetching experiment data from DB:', e);
+    }
 
     return NextResponse.json({
       experimentId: metadata.experimentId || 'Unknown',

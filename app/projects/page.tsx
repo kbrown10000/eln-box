@@ -2,6 +2,8 @@ import { Project } from '@/lib/box/types';
 import { listProjects } from '@/lib/box/folders';
 import { getAuthenticatedBoxClient } from '@/lib/auth/session';
 
+export const dynamic = 'force-dynamic';
+
 async function getProjects(): Promise<Project[]> {
   try {
     const client = await getAuthenticatedBoxClient();

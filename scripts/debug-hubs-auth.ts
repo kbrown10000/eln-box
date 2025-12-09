@@ -33,7 +33,7 @@ async function debugHubs() {
         // 2. List Users (to find a real human/admin to impersonate)
         console.log('\n2. Listing Users...');
         const users = await client.users.getUsers({ limit: 5 });
-        const realUser = users.entries?.find(u => !u.login.includes('AutomationUser')); // Filter out service accounts if possible
+        const realUser = users.entries?.find(u => u.login && !u.login.includes('AutomationUser')); // Filter out service accounts if possible
 
         if (realUser) {
             console.log(`   Found Real User: ${realUser.name} (ID: ${realUser.id}, Login: ${realUser.login})`);
@@ -49,7 +49,7 @@ async function debugHubs() {
                     title: hubName,
                     description: 'Created via User Impersonation'
                 });
-                console.log(`   ✅ SUCCESS! Created Hub: ${hub.name} (${hub.id})`);
+                console.log(`   ✅ SUCCESS! Created Hub: ${(hub as any).name} (${hub.id})`);
             } catch (e: any) {
                 console.error(`   ❌ Failed as User: ${e.message}`);
                 if (e.responseInfo?.body) console.error('   Error:', JSON.stringify(e.responseInfo.body, null, 2));
@@ -66,7 +66,7 @@ async function debugHubs() {
                 title: "LabNoteX Service Hub",
                 description: "Created by Service Account"
             });
-            console.log(`   ✅ SUCCESS! Created Hub: ${hub.name} (${hub.id})`);
+            console.log(`   ✅ SUCCESS! Created Hub: ${(hub as any).name} (${hub.id})`);
         } catch (e: any) {
             console.error(`   ❌ Failed as Service Account: ${e.message}`);
              if (e.responseInfo?.body) console.error('   Error:', JSON.stringify(e.responseInfo.body, null, 2));

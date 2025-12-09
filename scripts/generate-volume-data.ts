@@ -24,8 +24,7 @@ function formatPrivateKey(key: string): string {
 }
 
 async function generateVolumeData() {
-    console.log('🚀 Generating Volume Data (Box Metadata-First)...
-');
+    console.log('🚀 Generating Volume Data (Box Metadata-First)...');
 
     const envKey = process.env.BOX_PRIVATE_KEY || '';
     const pKey = formatPrivateKey(envKey);

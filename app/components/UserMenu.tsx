@@ -98,9 +98,23 @@ export default function UserMenu() {
 
             {/* Sign Out */}
             <div className="border-t border-gray-100">
+              <a
+                href="/knowledge-base"
+                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                role="menuitem"
+              >
+                Knowledge Base
+              </a>
+              <a
+                href="/faq"
+                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                role="menuitem"
+              >
+                Technical FAQ
+              </a>
               <button
-                onClick={() => signOut({ callbackUrl: '/login' })}
-                className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                onClick={() => signOut()}
+                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
               >
                 Sign out
               </button>

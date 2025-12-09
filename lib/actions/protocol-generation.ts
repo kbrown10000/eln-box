@@ -16,7 +16,7 @@ export async function generateProtocol(userPrompt: string, experimentFolderId: s
 
   try {
     const { object: protocol } = await generateObject({
-      model: google(process.env.GEMINI_MODEL_ID || 'gemini-1.5-pro'),
+      model: google('gemini-1.5-flash-latest'),
       schema: z.object({
         title: z.string().optional(),
         objective: z.string().optional(),

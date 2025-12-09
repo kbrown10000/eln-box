@@ -139,7 +139,8 @@ async function syncAndSeed() {
                 boxProj = await createProject(boxClient, {
                     ...projData,
                     piName: user.name,
-                    piEmail: user.email
+                    piEmail: user.email,
+                    startDate: new Date().toISOString()
                 });
             } catch (err: any) {
                 if (err?.responseInfo?.statusCode === 409) {

@@ -40,7 +40,8 @@ async function forceSeed() {
         piName: user.name,
         piEmail: user.email,
         department: 'Testing',
-        status: 'active'
+        status: 'active',
+        startDate: new Date().toISOString()
     });
 
     // Create Project in DB

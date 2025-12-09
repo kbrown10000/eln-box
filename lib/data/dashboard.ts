@@ -1,30 +1,54 @@
-import { unstable_cache } from 'next/cache';
-import { getBoxClient } from '@/lib/box/client';
+import { getAuthenticatedBoxClient } from '@/lib/auth/session';
+import { listProjects, listExperiments } from '@/lib/box/folders';
 
-// Cache key for dashboard stats
-const DASHBOARD_STATS_TAG = 'dashboard-stats';
+export const getDashboardStats = async () => {
+    console.log('Fetching dashboard stats...');
+    const client = await getAuthenticatedBoxClient();
+    if (!client) {
+        // Return zero-state if no auth (or handle error upstream)
+        console.warn("Box client not initialized in getDashboardStats");
+        return {
+            overview: { projects: 0, experiments: 0, users: 0, spectra: 0, avgYield: 0 },
+            experimentsByStatus: [],
+            recentExperiments: [],
+            yieldsData: [],
+            spectraByType: [],
+            topReagents: [],
+        };
+    }
 
-export const getDashboardStats = unstable_cache(
-  async () => {
-    console.log('Fetching dashboard stats from Box Metadata...');
-    const client = getBoxClient();
-    const enterpriseId = process.env.BOX_ENTERPRISE_ID;
-    const expFrom = `enterprise_${enterpriseId}.experimentMetadata`;
-    const projFrom = `enterprise_${enterpriseId}.projectMetadata`;
-    const specFrom = `enterprise_${enterpriseId}.spectrumMetadata`;
     const ancestorFolderId = process.env.BOX_PROJECTS_FOLDER_ID;
-
     if (!ancestorFolderId) {
         throw new Error("BOX_PROJECTS_FOLDER_ID is not defined");
     }
 
-    // 1. Fetch All Experiments
-    let experimentItems: any[] = [];
+    // 1. Fetch Projects (Use shared logic with fallback)
+    let projects: any[] = [];
     try {
-        const experiments = await client.search.searchByMetadataQuery({
+        const result = await listProjects(client, { limit: 100 });
+        projects = result.items;
+    } catch (e: any) {
+        console.error("Failed to list projects for dashboard:", e);
+    }
+
+    // 2. Fetch Experiments (Use shared logic)
+    let experiments: any[] = [];
+    try {
+        // Fetch experiments for ALL projects? 
+        // listExperiments takes a projectFolderId. 
+        // To get a global dashboard, we might need a search. 
+        // BUT, let's use the optimized search in listExperiments if possible or a global search here.
+        // Since listExperiments is scoped to a project, let's keep the global search logic here BUT make it robust 
+        // or iterate projects if the count is small.
+        // Actually, for a dashboard, a global search is better.
+        
+        const enterpriseId = process.env.BOX_ENTERPRISE_ID;
+        const expFrom = `enterprise_${enterpriseId}.experimentMetadata`;
+
+        const searchResult = await client.search.searchByMetadataQuery({
           from: expFrom,
           query: "experimentId IS NOT NULL",
-          limit: 200,
+          limit: 100,
           ancestorFolderId: ancestorFolderId,
           fields: [
             "name", "created_at", "id",
@@ -38,35 +62,19 @@ export const getDashboardStats = unstable_cache(
           ],
           orderBy: [{ fieldKey: "created_at", direction: "desc" }]
         });
-        experimentItems = experiments.entries || [];
+        experiments = (searchResult.entries as any[]) || [];
+        
     } catch (e: any) {
-        console.error("Failed to fetch experiments metadata:", e.message || e);
-        // Fallback to empty if search fails (e.g., indexing delay)
+        console.warn("Failed to search experiments for dashboard:", e.message);
     }
 
-    // 2. Fetch Projects Count
-    let projectCount = 0;
+    // 3. Spectra (Keep existing logic but safe)
+    let spectraCount = 0;
+    const spectraMap: Record<string, number> = {};
     try {
-        // ... (Project iteration logic)
-        // Simplified: just fetch one page for count check
-        const p = await client.search.searchByMetadataQuery({
-            from: projFrom,
-            query: "projectCode IS NOT NULL",
-            limit: 1,
-            ancestorFolderId: ancestorFolderId,
-            fields: ["id"]
-        });
-        // Search API doesn't return total_count in generated SDK usually, but let's check if we can get it differently or assume at least what we found
-        // Actually, if we can't get total, we might just rely on the listProjects fallback if needed, but let's just use what we have.
-        // We will assume if we found entries, there are projects.
-        projectCount = p.entries?.length ? 5 : 0; // Dummy count if > 0 to show *something*
-    } catch (e: any) {
-        console.warn("Failed to fetch projects metadata:", e.message);
-    }
-
-    // 3. Spectra
-    let spectraItems: any[] = [];
-    try {
+         const enterpriseId = process.env.BOX_ENTERPRISE_ID;
+         const specFrom = `enterprise_${enterpriseId}.spectrumMetadata`;
+         
         const spectra = await client.search.searchByMetadataQuery({
             from: specFrom,
             query: "technique IS NOT NULL",
@@ -74,29 +82,35 @@ export const getDashboardStats = unstable_cache(
             ancestorFolderId: ancestorFolderId,
             fields: [`metadata.${specFrom}.technique`]
         });
-        spectraItems = spectra.entries || [];
+        const items = (spectra.entries as any[]) || [];
+        spectraCount = items.length;
+        
+        items.forEach((item: any) => {
+            const md = item.metadata?.[`enterprise_${enterpriseId}`]?.spectrumMetadata || {};
+            const type = md.technique || 'Other';
+            spectraMap[type] = (spectraMap[type] || 0) + 1;
+        });
     } catch (e: any) {
         console.warn("Failed to fetch spectra metadata:", e.message);
     }
 
-    // 4. Users (Mock)
+    // 4. Users (Mock for now, as we don't have a user list endpoint ready)
     const userCount = 5; 
-
-    // --- Calculations --- (Handle empty lists gracefully)
-    // ...
 
     // --- Calculations ---
 
+    const enterpriseId = process.env.BOX_ENTERPRISE_ID;
+
     // Status Distribution
     const statusMap: Record<string, number> = {};
-    experimentItems.forEach((item: any) => {
+    experiments.forEach((item: any) => {
         const md = item.metadata?.[`enterprise_${enterpriseId}`]?.experimentMetadata || {};
         const status = md.status || 'draft';
         statusMap[status] = (statusMap[status] || 0) + 1;
     });
 
     // Avg Yield
-    const yieldValues = experimentItems
+    const yieldValues = experiments
         .map((item: any) => item.metadata?.[`enterprise_${enterpriseId}`]?.experimentMetadata?.yield)
         .filter((y: any) => typeof y === 'number');
     const avgYield = yieldValues.length > 0 
@@ -105,7 +119,7 @@ export const getDashboardStats = unstable_cache(
 
     // Top Reagents
     const reagentMap: Record<string, number> = {};
-    experimentItems.forEach((item: any) => {
+    experiments.forEach((item: any) => {
         const md = item.metadata?.[`enterprise_${enterpriseId}`]?.experimentMetadata || {};
         if (md.keyReagentsIndex) {
             const reagents = md.keyReagentsIndex.split(',').map((s: string) => s.trim());
@@ -119,16 +133,8 @@ export const getDashboardStats = unstable_cache(
         .sort((a, b) => b.count - a.count)
         .slice(0, 10);
 
-    // Spectra By Type
-    const spectraMap: Record<string, number> = {};
-    spectraItems.forEach((item: any) => {
-        const md = item.metadata?.[`enterprise_${enterpriseId}`]?.spectrumMetadata || {};
-        const type = md.technique || 'Other';
-        spectraMap[type] = (spectraMap[type] || 0) + 1;
-    });
-
-    // Yields Data (Top 10)
-    const yieldsData = experimentItems
+    // Yields Data
+    const yieldsData = experiments
         .filter((item: any) => {
             const md = item.metadata?.[`enterprise_${enterpriseId}`]?.experimentMetadata || {};
             return typeof md.yield === 'number';
@@ -140,7 +146,7 @@ export const getDashboardStats = unstable_cache(
                 theoretical: md.theoreticalYield || 0,
                 actual: md.actualYield || 0,
                 percentage: md.yield || 0,
-                unit: 'g' // Default, not in metadata yet
+                unit: 'g'
             };
         })
         .sort((a: any, b: any) => b.percentage - a.percentage)
@@ -148,14 +154,14 @@ export const getDashboardStats = unstable_cache(
 
     return {
       overview: {
-        projects: projectCount || experimentItems.length > 0 ? 5 : 0, // Fallback if count failed
-        experiments: experimentItems.length,
+        projects: projects.length,
+        experiments: experiments.length,
         users: userCount,
-        spectra: spectraItems.length,
-        avgYield: avgYield,
+        spectra: spectraCount,
+        avgYield: Number(avgYield),
       },
       experimentsByStatus: Object.entries(statusMap).map(([status, count]) => ({ status, count })),
-      recentExperiments: experimentItems.slice(0, 5).map((item: any) => {
+      recentExperiments: experiments.slice(0, 5).map((item: any) => {
           const md = item.metadata?.[`enterprise_${enterpriseId}`]?.experimentMetadata || {};
           return {
             id: md.experimentId || item.id,
@@ -169,10 +175,4 @@ export const getDashboardStats = unstable_cache(
       spectraByType: Object.entries(spectraMap).map(([type, count]) => ({ type, count })),
       topReagents,
     };
-  },
-  [DASHBOARD_STATS_TAG], // Key parts
-  {
-    revalidate: 30, 
-    tags: [DASHBOARD_STATS_TAG],
-  }
-);
+  };

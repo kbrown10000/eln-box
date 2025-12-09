@@ -3,6 +3,9 @@ import { listExperiments, createExperiment } from '@/lib/box/folders';
 import { requireApiAuth } from '@/lib/auth/session';
 import { getBoxClient } from '@/lib/box/client';
 import { logActivity } from '@/lib/actions/audit';
+import { db } from '@/lib/db';
+import { projects, experiments } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 
 // GET /api/projects/:folderId/experiments - List experiments in a project
 // Query params: ?limit=50&offset=0
@@ -74,6 +77,32 @@ export async function POST(
       status: body.status || 'draft',
       tags: body.tags || [],
     });
+
+    // Sync with Database
+    try {
+        const project = await db.query.projects.findFirst({
+            where: eq(projects.boxFolderId, folderId)
+        });
+
+        if (project) {
+            await db.insert(experiments).values({
+                boxFolderId: experiment.folderId,
+                projectId: project.id,
+                experimentId: experiment.experimentId,
+                title: experiment.experimentTitle,
+                objective: experiment.objective,
+                hypothesis: experiment.hypothesis,
+                status: (experiment.status as any) || 'draft',
+                authorId: session!.user.id,
+                startedAt: experiment.startedAt ? new Date(experiment.startedAt) : new Date()
+            });
+        } else {
+            console.warn(`Project ${folderId} not found in DB. Experiment ${experiment.folderId} created in Box only.`);
+        }
+    } catch (dbError) {
+        console.error('Failed to sync experiment to DB:', dbError);
+        // Continue, as Box creation was successful
+    }
 
     // Log activity
     await logActivity(

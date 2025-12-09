@@ -8,7 +8,14 @@ function toDateString(date: any): string {
   if (!date) return '';
   if (typeof date === 'string') return date;
   if (date instanceof Date) return date.toISOString();
-  return String(date);
+  
+  // Attempt to parse standard date strings or timestamps
+  const parsed = new Date(date);
+  if (!isNaN(parsed.getTime())) {
+      return parsed.toISOString();
+  }
+  
+  return '';
 }
 
 /**
@@ -46,18 +53,21 @@ export async function createProject(client: BoxClient, project: Omit<Project, 'f
 
   // 3. Apply metadata template
   try {
-    await client.folderMetadata.createFolderMetadataById(folder.id, 'enterprise', 'projectMetadata', {
+    const metadata: any = {
       projectCode: project.projectCode,
       projectName: project.projectName,
       piName: project.piName,
       piEmail: project.piEmail,
       department: project.department,
-      startDate: project.startDate,
       status: project.status,
       description: project.description,
-    });
-  } catch (error) {
-    console.warn('Failed to apply metadata template. This is normal if the template does not exist yet:', error);
+    };
+    if (project.startDate) metadata.startDate = project.startDate;
+
+    console.log('DEBUG: Applying project metadata:', JSON.stringify(metadata));
+    await client.folderMetadata.createFolderMetadataById(folder.id, 'enterprise', 'projectMetadata', metadata);
+  } catch (error: any) {
+    console.warn('Failed to apply metadata template:', error.message || String(error));
   }
 
   return {
@@ -72,20 +82,23 @@ export async function createProject(client: BoxClient, project: Omit<Project, 'f
 export async function getProject(client: BoxClient, folderId: string): Promise<Project> {
   try {
     const metadata: any = await client.folderMetadata.getFolderMetadataById(folderId, 'enterprise', 'projectMetadata');
+    console.log(`DEBUG: getProject ${folderId} raw metadata:`, JSON.stringify(metadata));
+
+    const data = metadata.extraData || metadata; // Handle extraData wrapper if present
 
     return {
       folderId,
-      projectCode: metadata.projectCode,
-      projectName: metadata.projectName,
-      piName: metadata.piName,
-      piEmail: metadata.piEmail,
-      department: metadata.department,
-      startDate: toDateString(metadata.startDate),
-      status: metadata.status,
-      description: metadata.description,
+      projectCode: data.projectCode,
+      projectName: data.projectName,
+      piName: data.piName,
+      piEmail: data.piEmail,
+      department: data.department,
+      startDate: toDateString(data.startDate),
+      status: data.status,
+      description: data.description,
     };
-  } catch (error) {
-    console.warn(`DEBUG: Failed to get metadata for project ${folderId}:`, error);
+  } catch (error: any) {
+    console.warn(`DEBUG: Failed to get metadata for project ${folderId}:`, error.message || String(error));
     // If metadata doesn't exist, fall back to folder name parsing
     const folder = await client.folders.getFolderById(folderId);
     const nameParts = folder.name!.split('-');
@@ -193,13 +206,33 @@ export async function listProjects(
       limit
     });
 
+    console.log(`DEBUG: listProjects Search Found ${results.entries?.length || 0} items`);
+
     const projects = (results.entries || []).map((item: any) => {
-      const md = item.metadata?.[`enterprise_${enterpriseId}`]?.projectMetadata || {};
-      // Map metadata to Project type
+      // Robust metadata extraction
+      const md = item.metadata?.extraData || 
+                 item.metadata?.[`enterprise_${enterpriseId}`]?.projectMetadata || 
+                 item.metadata?.projectMetadata || 
+                 {};
+
+      // Fallback: Parse name if metadata is missing or incomplete
+      let projectCode = md.projectCode;
+      let projectName = md.projectName;
+
+      if (!projectCode || projectCode === 'UNKNOWN' || !projectName) {
+          const nameParts = item.name.split('-');
+          if (!projectCode || projectCode === 'UNKNOWN') {
+              projectCode = nameParts[0] || 'UNKNOWN';
+          }
+          if (!projectName) {
+              projectName = nameParts.slice(1).join(' ') || item.name;
+          }
+      }
+
       return {
         folderId: item.id,
-        projectCode: md.projectCode || 'UNKNOWN',
-        projectName: md.projectName || item.name,
+        projectCode: projectCode,
+        projectName: projectName,
         piName: md.piName || '',
         piEmail: md.piEmail || '',
         department: md.department || '',
@@ -308,7 +341,7 @@ export async function createExperiment(
 
   // Apply metadata
   try {
-    await client.folderMetadata.createFolderMetadataById(folder.id, 'enterprise', 'experimentMetadata', {
+    const metadata: any = {
       experimentId: experiment.experimentId,
       experimentTitle: experiment.experimentTitle,
       objective: experiment.objective,
@@ -316,10 +349,19 @@ export async function createExperiment(
       ownerName: experiment.ownerName,
       ownerEmail: experiment.ownerEmail,
       status: experiment.status,
-      tags: experiment.tags,
-    });
-  } catch (error) {
-    console.warn('Failed to apply experiment metadata template:', error);
+    };
+    const VALID_TAGS = ['synthesis', 'analysis', 'characterization', 'purification', 'validation'];
+    if (experiment.tags) {
+        const validTags = experiment.tags.filter(t => VALID_TAGS.includes(t.toLowerCase()));
+        if (validTags.length > 0) {
+            metadata.tags = validTags;
+        }
+    }
+
+    console.log('DEBUG: Applying experiment metadata:', JSON.stringify(metadata));
+    await client.folderMetadata.createFolderMetadataById(folder.id, 'enterprise', 'experimentMetadata', metadata);
+  } catch (error: any) {
+    console.warn('Failed to apply experiment metadata template:', error.message || String(error));
   }
 
   return {
