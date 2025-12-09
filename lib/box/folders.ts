@@ -1,5 +1,6 @@
 import type { BoxClient } from './client';
 import { Project, Experiment } from './types';
+export type { Project, Experiment };
 
 /**
  * Helper to ensure dates are always strings (for serialization)
