@@ -150,116 +150,86 @@ export async function listProjects(
 ): Promise<PaginatedResult<Project>> {
   const limit = Math.min(options.limit || DEFAULT_LIMIT, MAX_LIMIT);
   const offset = options.offset || 0;
+  const projectsFolderId = getProjectsFolderId();
+  const enterpriseId = process.env.BOX_ENTERPRISE_ID;
 
-  // Fallback logic using N+1 iteration (reliable but slow)
-  const executeFallback = async () => {
-    const projectsFolderId = getProjectsFolderId();
+  try {
+    // Use getFolderItems with specific fields to fetch metadata in one round-trip
+    // This avoids N+1 calls and avoids Search Index latency/filtering issues
+    const metadataKey = `metadata.enterprise_${enterpriseId}.projectMetadata`;
+    
     const items = await client.folders.getFolderItems(projectsFolderId, {
-      // limit, offset // Removed to match strict type
-    });
+      limit,
+      offset,
+      fields: [
+        'id',
+        'type',
+        'name',
+        'created_at',
+        metadataKey
+      ]
+    } as any);
 
     const projects: Project[] = [];
+
     for (const item of items.entries || []) {
       if (item.type === 'folder') {
-        try {
-          const project = await getProject(client, item.id);
-          projects.push(project);
-        } catch (error) {
-          console.error(`Failed to get project ${item.id}:`, error);
+        // Extract metadata safely
+        // The SDK structure for 'metadata' in getFolderItems response can be dynamic
+        const mdContainer = (item as any).metadata;
+        const enterpriseMd = mdContainer ? mdContainer[`enterprise_${enterpriseId}`] : undefined;
+        const md = enterpriseMd ? enterpriseMd['projectMetadata'] : undefined;
+
+        if (md) {
+          // Metadata exists
+          projects.push({
+            folderId: item.id,
+            projectCode: md.projectCode || 'UNKNOWN',
+            projectName: md.projectName || item.name,
+            piName: md.piName || '',
+            piEmail: md.piEmail || '',
+            department: md.department || '',
+            startDate: toDateString(md.startDate || (item as any).created_at),
+            status: md.status || 'planning',
+            description: md.description || ''
+          });
+        } else {
+          // Metadata missing - Fallback to name parsing
+          const nameParts = item.name!.split('-');
+          const projectCode = nameParts[0] || 'UNKNOWN';
+          const projectName = nameParts.slice(1).join(' ') || item.name!;
+
+          projects.push({
+            folderId: item.id,
+            projectCode,
+            projectName,
+            piName: '',
+            piEmail: '',
+            department: '',
+            startDate: toDateString((item as any).created_at || new Date()),
+            status: 'planning',
+            description: '',
+          });
         }
       }
     }
+
     return {
       items: projects,
       totalCount: items.totalCount || items.entries?.length || 0,
       limit,
       offset,
     };
-  };
-
-  // If using offset pagination, fallback (Metadata Query uses markers)
-  if (offset > 0) {
-    return executeFallback();
-  }
-
-  try {
-    const projectsFolderId = getProjectsFolderId();
-    
-    // Optimistic Metadata Query
-    const enterpriseId = process.env.BOX_ENTERPRISE_ID;
-    const from = `enterprise_${enterpriseId}.projectMetadata`;
-
-    const results = await client.search.searchByMetadataQuery({
-      from,
-      ancestorFolderId: projectsFolderId,
-      query: "projectCode IS NOT NULL",
-      fields: [
-        "name", "created_at", 
-        `metadata.${from}.projectCode`,
-        `metadata.${from}.projectName`,
-        `metadata.${from}.piName`,
-        `metadata.${from}.piEmail`,
-        `metadata.${from}.department`,
-        `metadata.${from}.startDate`,
-        `metadata.${from}.status`,
-        `metadata.${from}.description`
-      ],
-      limit
-    });
-
-    console.log(`DEBUG: listProjects Search Found ${results.entries?.length || 0} items`);
-
-    const projects = (results.entries || []).map((item: any) => {
-      // Robust metadata extraction
-      const md = item.metadata?.extraData || 
-                 item.metadata?.[`enterprise_${enterpriseId}`]?.projectMetadata || 
-                 item.metadata?.projectMetadata || 
-                 {};
-
-      // Fallback: Parse name if metadata is missing or incomplete
-      let projectCode = md.projectCode;
-      let projectName = md.projectName;
-
-      if (!projectCode || projectCode === 'UNKNOWN' || !projectName) {
-          const nameParts = item.name.split('-');
-          if (!projectCode || projectCode === 'UNKNOWN') {
-              projectCode = nameParts[0] || 'UNKNOWN';
-          }
-          if (!projectName) {
-              projectName = nameParts.slice(1).join(' ') || item.name;
-          }
-      }
-
-      return {
-        folderId: item.id,
-        projectCode: projectCode,
-        projectName: projectName,
-        piName: md.piName || '',
-        piEmail: md.piEmail || '',
-        department: md.department || '',
-        startDate: toDateString(md.startDate || item.createdAt || item.created_at),
-        status: md.status || 'planning',
-        description: md.description || ''
-      };
-    });
-
-    // Force fallback if metadata query returns 0 results (likely indexing delay)
-    if (projects.length === 0) {
-        console.log("Metadata query returned 0 results. Falling back to folder traversal.");
-        return executeFallback();
-    }
-
-    return {
-      items: projects,
-      totalCount: projects.length, // Approximate
-      limit,
-      offset
-    };
 
   } catch (error) {
-    // Fallback on any error (API error, missing index, SDK mismatch)
-    console.warn("Metadata Query optimization failed, using fallback:", error);
-    return executeFallback();
+    console.error("Failed to list projects:", error);
+    // Return empty list rather than throwing, to allow UI to render partial state
+    return {
+        items: [],
+        totalCount: 0,
+        limit,
+        offset
+    };
   }
 }
 
